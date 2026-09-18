@@ -1,6 +1,8 @@
 import { Outlet } from "react-router-dom";
 import { Navbar } from "./components/layout/Navbar";
-import { BackToTop, Footer, GlobalStyles } from "./MainPage";
+import { GlobalStyles } from "../client/components/layout/globalStyle";
+import { BackToTop} from "../client/components/layout/BackToTop";
+import { Footer } from "./components/layout/Footer";
 
 
 

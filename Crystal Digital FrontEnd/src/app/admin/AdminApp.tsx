@@ -875,7 +875,7 @@ function AdminProducts({ products, setProducts }: { products: AdminProduct[]; se
             Product_Name: data.name,
             Category: data.cat,
             Description: data.desc || "—",
-            Tags: data.tags || "—",
+            Tags: data.tags?.join(", ") || "—",
             Visit: "https://crystaldigital.com.np",
           }
         );
