@@ -24,61 +24,17 @@ import {
   Tag,
   AlertTriangle,
 } from "lucide-react";
-
-// ── Types ────────────────────────────────────────────────────────────────────
-interface AdminProduct {
-  id: string;
-  name: string;
-  desc: string;
-  fullDesc: string;
-  cat: string;
-  features: string[];
-  specs: { label: string; value: string }[];
-  customizable: string[];
-  tags: string[];
-  sizes: string[];
-  imgUrl: string;
-}
-
-interface GalleryItem {
-  id: string;
-  label: string;
-  cat: string;
-  imgUrl: string;
-  linkedProductId?: string;
-}
-
-interface Testimonial {
-  id: string;
-  name: string;
-  company: string;
-  text: string;
-  rating: number;
-}
-
-interface QuoteRequest {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  product: string;
-  size?: string;
-  message: string;
-  date: string;
-  status: "new" | "reviewed" | "quoted" | "closed";
-}
-
-interface SiteSettings {
-  businessName: string;
-  tagline: string;
-  phone: string;
-  email: string;
-  address: string;
-  mapLink: string;
-  facebookUrl: string;
-  workingHours: string;
-  whatsapp: string;
-}
+import { AdminProduct } from "./types/interface/production/adminProduct";
+import { GalleryItem } from "./types/interface/gallery/gakkeryItem";
+import { Testimonial } from "./types/interface/testimonials/testimonials";
+import { QuoteRequest } from "./types/interface/quoteRequest/quoteRequest";
+import { SiteSettings } from "./types/interface/setting/siteSetting";
+import { AdminOverview } from "./pages/DashBoard";
+import { AdminProducts } from "./pages/adminProduct";
+import { AdminGallery } from "./pages/galleryModal";
+import { AdminTestimonials } from "./pages/testimonials";
+import { AdminQuotes } from "./pages/quoteRequest";
+import { AdminSettings } from "./pages/setting";
 
 // ── Seed Data ─────────────────────────────────────────────────────────────────
 const SEED_PRODUCTS: AdminProduct[] = [
@@ -172,7 +128,7 @@ const SEED_SETTINGS: SiteSettings = {
 };
 
 // ── Storage Helpers ───────────────────────────────────────────────────────────
-function load<T>(key: string, seed: T): T {
+export function load<T>(key: string, seed: T): T {
   try {
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : seed;
@@ -180,12 +136,12 @@ function load<T>(key: string, seed: T): T {
     return seed;
   }
 }
-function save<T>(key: string, data: T) {
+export function save<T>(key: string, data: T) {
   localStorage.setItem(key, JSON.stringify(data));
 }
 
 // ── Email Notification Helper ─────────────────────────────────────────────────
-async function sendNotificationEmail(to: string, subject: string, fields: Record<string, string>) {
+export async function sendNotificationEmail(to: string, subject: string, fields: Record<string, string>) {
   try {
     await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
       method: "POST",
@@ -200,9 +156,9 @@ async function sendNotificationEmail(to: string, subject: string, fields: Record
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "crystal@2024";
-const PRODUCT_CATS = ["Crystal", "Trophies", "Plaques", "Medals", "Collection", "Gifts"];
-const GALLERY_CATS = ["Crystal Awards", "Trophies", "Plaques", "Medals", "Collection", "Printing"];
-const STATUS_COLORS: Record<QuoteRequest["status"], string> = {
+export const PRODUCT_CATS = ["Crystal", "Trophies", "Plaques", "Medals", "Collection", "Gifts"];
+export const GALLERY_CATS = ["Crystal Awards", "Trophies", "Plaques", "Medals", "Collection", "Printing"];
+export const STATUS_COLORS: Record<QuoteRequest["status"], string> = {
   new: "#2563EB",
   reviewed: "#D4AF37",
   quoted: "#16A34A",
@@ -216,7 +172,7 @@ const STATUS_BG: Record<QuoteRequest["status"], string> = {
 };
 
 // ── Shared UI ─────────────────────────────────────────────────────────────────
-function Badge({ status }: { status: QuoteRequest["status"] }) {
+export function Badge({ status }: { status: QuoteRequest["status"] }) {
   return (
     <span
       className="text-xs font-semibold px-2.5 py-1 rounded-full capitalize"
@@ -227,7 +183,7 @@ function Badge({ status }: { status: QuoteRequest["status"] }) {
   );
 }
 
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
@@ -244,7 +200,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
-function ConfirmModal({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
+export function ConfirmModal({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
@@ -267,7 +223,7 @@ function ConfirmModal({ message, onConfirm, onCancel }: { message: string; onCon
   );
 }
 
-function Input({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label?: string }) {
+export function Input({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label?: string }) {
   return (
     <div className="flex flex-col gap-1.5">
       {label && <label className="text-sm font-semibold text-gray-700">{label}</label>}
@@ -279,7 +235,7 @@ function Input({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> 
   );
 }
 
-function Textarea({ label, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string }) {
+export function Textarea({ label, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string }) {
   return (
     <div className="flex flex-col gap-1.5">
       {label && <label className="text-sm font-semibold text-gray-700">{label}</label>}
@@ -291,7 +247,7 @@ function Textarea({ label, ...props }: React.TextareaHTMLAttributes<HTMLTextArea
   );
 }
 
-function Select({ label, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { label?: string }) {
+export function Select({ label, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { label?: string }) {
   return (
     <div className="flex flex-col gap-1.5">
       {label && <label className="text-sm font-semibold text-gray-700">{label}</label>}
@@ -306,7 +262,7 @@ function Select({ label, children, ...props }: React.SelectHTMLAttributes<HTMLSe
 }
 
 // ── Image Upload Field ────────────────────────────────────────────────────────
-function ImageUploadField({ label, value, onChange }: { label?: string; value: string; onChange: (dataUrl: string) => void }) {
+export function ImageUploadField({ label, value, onChange }: { label?: string; value: string; onChange: (dataUrl: string) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -459,7 +415,7 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
-type AdminSection = "overview" | "products" | "gallery" | "testimonials" | "quotes" | "settings";
+export type AdminSection = "overview" | "products" | "gallery" | "testimonials" | "quotes" | "settings";
 
 const NAV_ITEMS: { id: AdminSection; label: string; icon: React.ReactNode; badge?: number }[] = [
   { id: "overview", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
@@ -547,979 +503,6 @@ function Sidebar({
         </div>
       </aside>
     </>
-  );
-}
-
-// ── Overview ──────────────────────────────────────────────────────────────────
-function AdminOverview({
-  products,
-  gallery,
-  testimonials,
-  quotes,
-  setSection,
-}: {
-  products: AdminProduct[];
-  gallery: GalleryItem[];
-  testimonials: Testimonial[];
-  quotes: QuoteRequest[];
-  setSection: (s: AdminSection) => void;
-}) {
-  const newQuotes = quotes.filter((q) => q.status === "new").length;
-  const stats = [
-    { label: "Total Products", value: products.length, icon: <Package size={22} />, color: "#2563EB", bg: "#EFF6FF", section: "products" as AdminSection },
-    { label: "Gallery Items", value: gallery.length, icon: <Image size={22} />, color: "#16A34A", bg: "#F0FDF4", section: "gallery" as AdminSection },
-    { label: "Testimonials", value: testimonials.length, icon: <Star size={22} />, color: "#D4AF37", bg: "#FEFCE8", section: "testimonials" as AdminSection },
-    { label: "New Inquiries", value: newQuotes, icon: <MessageSquare size={22} />, color: "#DC2626", bg: "#FEF2F2", section: "quotes" as AdminSection },
-  ];
-
-  const recentQuotes = quotes.slice(0, 4);
-
-  return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800" style={{ fontFamily: "Poppins, sans-serif" }}>Dashboard Overview</h1>
-        <p className="text-gray-500 text-sm mt-1">Welcome back! Here's what's happening with your store.</p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((s) => (
-          <button
-            key={s.label}
-            onClick={() => setSection(s.section)}
-            className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 text-left hover:shadow-md transition-all group"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: s.bg, color: s.color }}>
-                {s.icon}
-              </div>
-              <TrendingUp size={16} className="text-gray-300 group-hover:text-gray-400 transition-colors" />
-            </div>
-            <div className="text-2xl font-bold text-gray-800 mb-0.5" style={{ fontFamily: "Poppins, sans-serif" }}>{s.value}</div>
-            <div className="text-xs text-gray-500">{s.label}</div>
-          </button>
-        ))}
-      </div>
-
-      {/* Recent inquiries */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-bold text-gray-800" style={{ fontFamily: "Poppins, sans-serif" }}>Recent Quote Requests</h2>
-          <button onClick={() => setSection("quotes")} className="text-sm text-blue-600 hover:text-blue-700 font-medium">View all</button>
-        </div>
-        <div className="divide-y divide-gray-50">
-          {recentQuotes.map((q) => (
-            <div key={q.id} className="p-4 flex items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="font-semibold text-sm text-gray-800">{q.name}</span>
-                  <Badge status={q.status} />
-                </div>
-                <div className="text-xs text-gray-500 truncate">{q.product} — {q.message.slice(0, 60)}...</div>
-              </div>
-              <div className="text-xs text-gray-400 flex-shrink-0">{q.date}</div>
-            </div>
-          ))}
-          {recentQuotes.length === 0 && (
-            <div className="p-8 text-center text-gray-400 text-sm">No quote requests yet.</div>
-          )}
-        </div>
-      </div>
-
-      {/* Quick actions */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-        <h2 className="font-bold text-gray-800 mb-4" style={{ fontFamily: "Poppins, sans-serif" }}>Quick Actions</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: "Add Product", icon: <Package size={18} />, section: "products" as AdminSection, color: "#2563EB" },
-            { label: "Add Gallery Item", icon: <Image size={18} />, section: "gallery" as AdminSection, color: "#16A34A" },
-            { label: "Add Testimonial", icon: <Star size={18} />, section: "testimonials" as AdminSection, color: "#D4AF37" },
-            { label: "View Inquiries", icon: <MessageSquare size={18} />, section: "quotes" as AdminSection, color: "#DC2626" },
-          ].map((a) => (
-            <button
-              key={a.label}
-              onClick={() => setSection(a.section)}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all"
-            >
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${a.color}15`, color: a.color }}>
-                {a.icon}
-              </div>
-              <span className="text-xs font-medium text-gray-700 text-center">{a.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Products Panel ────────────────────────────────────────────────────────────
-function emptyProduct(): Omit<AdminProduct, "id"> {
-  return { name: "", desc: "", fullDesc: "", cat: "Crystal", features: [], specs: [], customizable: [], tags: [], sizes: [], imgUrl: "" };
-}
-
-function ProductModal({
-  initial,
-  onSave,
-  onClose,
-}: {
-  initial?: AdminProduct;
-  onSave: (p: Omit<AdminProduct, "id">) => void;
-  onClose: () => void;
-}) {
-  const [form, setForm] = useState<Omit<AdminProduct, "id">>(initial ? { ...initial, sizes: initial.sizes ?? [] } : emptyProduct());
-  const [featInput, setFeatInput] = useState("");
-  const [tagInput, setTagInput] = useState("");
-  const [customInput, setCustomInput] = useState("");
-  const [sizeInput, setSizeInput] = useState("");
-  const [specLabel, setSpecLabel] = useState("");
-  const [specVal, setSpecVal] = useState("");
-
-  function addItem(field: "features" | "customizable", val: string, setter: (v: string) => void) {
-    if (!val.trim()) return;
-    setForm((f) => ({ ...f, [field]: [...f[field], val.trim()] }));
-    setter("");
-  }
-  function removeItem(field: "features" | "customizable", idx: number) {
-    setForm((f) => ({ ...f, [field]: f[field].filter((_, i) => i !== idx) }));
-  }
-  function addTag() {
-    if (!tagInput.trim()) return;
-    setForm((f) => ({ ...f, tags: [...f.tags, tagInput.trim()] }));
-    setTagInput("");
-  }
-  function addSpec() {
-    if (!specLabel.trim() || !specVal.trim()) return;
-    setForm((f) => ({ ...f, specs: [...f.specs, { label: specLabel.trim(), value: specVal.trim() }] }));
-    setSpecLabel(""); setSpecVal("");
-  }
-
-  return (
-    <Modal title={initial ? "Edit Product" : "Add New Product"} onClose={onClose}>
-      <div className="space-y-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Product Name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Crystal Award" required />
-          <Select label="Category *" value={form.cat} onChange={(e) => setForm({ ...form, cat: e.target.value })}>
-            {PRODUCT_CATS.map((c) => <option key={c}>{c}</option>)}
-          </Select>
-        </div>
-        <Input label="Short Description *" value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder="Brief product description" required />
-        <Textarea label="Full Description" value={form.fullDesc} onChange={(e) => setForm({ ...form, fullDesc: e.target.value })} rows={4} placeholder="Detailed product description..." />
-        <ImageUploadField label="Product Image" value={form.imgUrl} onChange={(url) => setForm({ ...form, imgUrl: url })} />
-
-        {/* Features */}
-        <div>
-          <label className="text-sm font-semibold text-gray-700 block mb-2">Features</label>
-          <div className="flex gap-2 mb-2">
-            <input value={featInput} onChange={(e) => setFeatInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addItem("features", featInput, setFeatInput))} placeholder="Add a feature..." className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
-            <button onClick={() => addItem("features", featInput, setFeatInput)} className="px-3 py-2 rounded-lg text-white text-sm" style={{ background: "#2563EB" }}><Plus size={16} /></button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {form.features.map((f, i) => (
-              <span key={i} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-100">
-                {f} <button onClick={() => removeItem("features", i)}><X size={12} /></button>
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Specs */}
-        <div>
-          <label className="text-sm font-semibold text-gray-700 block mb-2">Specifications</label>
-          <div className="flex gap-2 mb-2">
-            <input value={specLabel} onChange={(e) => setSpecLabel(e.target.value)} placeholder="Label (e.g. Material)" className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
-            <input value={specVal} onChange={(e) => setSpecVal(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addSpec())} placeholder="Value" className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
-            <button onClick={addSpec} className="px-3 py-2 rounded-lg text-white text-sm" style={{ background: "#2563EB" }}><Plus size={16} /></button>
-          </div>
-          <div className="space-y-1.5">
-            {form.specs.map((s, i) => (
-              <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-gray-50 text-sm">
-                <span className="font-medium text-gray-700">{s.label}:</span>
-                <span className="text-gray-600">{s.value}</span>
-                <button onClick={() => setForm((f) => ({ ...f, specs: f.specs.filter((_, ii) => ii !== i) }))}><X size={14} className="text-gray-400 hover:text-red-500" /></button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Customizable */}
-        <div>
-          <label className="text-sm font-semibold text-gray-700 block mb-2">Customization Options</label>
-          <div className="flex gap-2 mb-2">
-            <input value={customInput} onChange={(e) => setCustomInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addItem("customizable", customInput, setCustomInput))} placeholder="Add option..." className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
-            <button onClick={() => addItem("customizable", customInput, setCustomInput)} className="px-3 py-2 rounded-lg text-white text-sm" style={{ background: "#2563EB" }}><Plus size={16} /></button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {form.customizable.map((c, i) => (
-              <span key={i} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs bg-green-50 text-green-700 border border-green-100">
-                {c} <button onClick={() => removeItem("customizable", i)}><X size={12} /></button>
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Sizes */}
-        <div>
-          <label className="text-sm font-semibold text-gray-700 block mb-1">
-            Available Sizes <span className="font-normal text-gray-400">(optional)</span>
-          </label>
-          <p className="text-xs text-gray-500 mb-2">
-            Leave empty if this product comes in one standard size only — size selection will be hidden on the product page.
-          </p>
-          <div className="flex gap-2 mb-2">
-            <input
-              value={sizeInput}
-              onChange={(e) => setSizeInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  if (!sizeInput.trim()) return;
-                  setForm((f) => ({ ...f, sizes: [...(f.sizes || []), sizeInput.trim()] }));
-                  setSizeInput("");
-                }
-              }}
-              placeholder="e.g. Small — 15cm  or  A4  or  50mm"
-              className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-            />
-            <button
-              onClick={() => {
-                if (!sizeInput.trim()) return;
-                setForm((f) => ({ ...f, sizes: [...(f.sizes || []), sizeInput.trim()] }));
-                setSizeInput("");
-              }}
-              className="px-3 py-2 rounded-lg text-white text-sm"
-              style={{ background: "#2563EB" }}
-            >
-              <Plus size={16} />
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {(form.sizes || []).map((s, i) => (
-              <span
-                key={i}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
-                style={{ background: "#EFF6FF", color: "#1D4ED8", border: "1px solid #BFDBFE" }}
-              >
-                {s}{" "}
-                <button
-                  onClick={() =>
-                    setForm((f) => ({ ...f, sizes: (f.sizes || []).filter((_, ii) => ii !== i) }))
-                  }
-                >
-                  <X size={12} />
-                </button>
-              </span>
-            ))}
-            {(form.sizes || []).length === 0 && (
-              <span className="text-xs text-gray-400 italic">No sizes added — single/standard size product</span>
-            )}
-          </div>
-        </div>
-
-        {/* Tags */}
-        <div>
-          <label className="text-sm font-semibold text-gray-700 block mb-2">Tags</label>
-          <div className="flex gap-2 mb-2">
-            <input value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())} placeholder="e.g. Popular, Best Seller" className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
-            <button onClick={addTag} className="px-3 py-2 rounded-lg text-white text-sm" style={{ background: "#2563EB" }}><Plus size={16} /></button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {form.tags.map((t, i) => (
-              <span key={i} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs border font-medium" style={{ background: "#FEF3C7", color: "#92400E", borderColor: "#FDE68A" }}>
-                <Tag size={11} /> {t} <button onClick={() => setForm((f) => ({ ...f, tags: f.tags.filter((_, ii) => ii !== i) }))}><X size={12} /></button>
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-3 pt-2">
-          <button onClick={onClose} className="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
-          <button
-            onClick={() => { if (form.name && form.desc) onSave(form); }}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:shadow-lg"
-            style={{ background: "linear-gradient(135deg, #2563EB, #1D4ED8)" }}
-          >
-            {initial ? "Save Changes" : "Add Product"}
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function AdminProducts({ products, setProducts }: { products: AdminProduct[]; setProducts: (p: AdminProduct[]) => void }) {
-  const [search, setSearch] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<AdminProduct | null>(null);
-  const [deleting, setDeleting] = useState<AdminProduct | null>(null);
-  const [catFilter, setCatFilter] = useState("All");
-
-  const filtered = products.filter((p) =>
-    (catFilter === "All" || p.cat === catFilter) &&
-    (p.name.toLowerCase().includes(search.toLowerCase()) || p.cat.toLowerCase().includes(search.toLowerCase()))
-  );
-
-  function handleSave(data: Omit<AdminProduct, "id">) {
-    if (editing) {
-      const updated = products.map((p) => p.id === editing.id ? { ...data, id: editing.id } : p);
-      setProducts(updated);
-    } else {
-      setProducts([...products, { ...data, id: `prod-${Date.now()}` }]);
-      const subscribers: string[] = load("cdaah_subscribers", []);
-      subscribers.forEach((email) => {
-        sendNotificationEmail(
-          email,
-          `New Product: ${data.name} — Crystal Digital Art & Award House`,
-          {
-            Notification: "A new product has been added to Crystal Digital Art & Award House.",
-            Product_Name: data.name,
-            Category: data.cat,
-            Description: data.desc || "—",
-            Tags: data.tags?.join(", ") || "—",
-            Visit: "https://crystaldigital.com.np",
-          }
-        );
-      });
-    }
-    setShowModal(false);
-    setEditing(null);
-  }
-
-  function handleDelete() {
-    if (!deleting) return;
-    setProducts(products.filter((p) => p.id !== deleting.id));
-    setDeleting(null);
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800" style={{ fontFamily: "Poppins, sans-serif" }}>Products</h1>
-          <p className="text-gray-500 text-sm mt-0.5">{products.length} products in catalogue</p>
-        </div>
-        <button
-          onClick={() => { setEditing(null); setShowModal(true); }}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:shadow-lg active:scale-95"
-          style={{ background: "linear-gradient(135deg, #2563EB, #1D4ED8)" }}
-        >
-          <Plus size={18} /> Add Product
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search products..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 bg-white" />
-        </div>
-        <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 bg-white">
-          <option value="All">All Categories</option>
-          {PRODUCT_CATS.map((c) => <option key={c}>{c}</option>)}
-        </select>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto no-scrollbar" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Product</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Category</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Tags</th>
-                <th className="text-right px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filtered.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-5 py-4">
-                    <div className="font-semibold text-gray-800 text-sm">{p.name}</div>
-                    <div className="text-gray-500 text-xs mt-0.5 truncate max-w-xs">{p.desc}</div>
-                  </td>
-                  <td className="px-5 py-4 hidden sm:table-cell">
-                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">{p.cat}</span>
-                  </td>
-                  <td className="px-5 py-4 hidden md:table-cell">
-                    <div className="flex flex-wrap gap-1">
-                      {p.tags.map((t) => (
-                        <span key={t} className="text-xs px-2 py-0.5 rounded-full border font-medium" style={{ background: "#FEF3C7", color: "#92400E", borderColor: "#FDE68A" }}>{t}</span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => { setEditing(p); setShowModal(true); }} className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors">
-                        <Pencil size={15} />
-                      </button>
-                      <button onClick={() => setDeleting(p)} className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors">
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={4} className="px-5 py-12 text-center text-gray-400 text-sm">No products found.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {showModal && (
-        <ProductModal initial={editing ?? undefined} onSave={handleSave} onClose={() => { setShowModal(false); setEditing(null); }} />
-      )}
-      {deleting && (
-        <ConfirmModal message={`Are you sure you want to delete "${deleting.name}"? This cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDeleting(null)} />
-      )}
-    </div>
-  );
-}
-
-// ── Gallery Panel ─────────────────────────────────────────────────────────────
-function GalleryModal({
-  initial,
-  onSave,
-  onClose,
-  products,
-}: {
-  initial?: GalleryItem;
-  onSave: (g: Omit<GalleryItem, "id">) => void;
-  onClose: () => void;
-  products: AdminProduct[];
-}) {
-  const [form, setForm] = useState<Omit<GalleryItem, "id">>(
-    initial
-      ? { label: initial.label, cat: initial.cat, imgUrl: initial.imgUrl, linkedProductId: initial.linkedProductId }
-      : { label: "", cat: "Crystal Awards", imgUrl: "", linkedProductId: undefined }
-  );
-
-  return (
-    <Modal title={initial ? "Edit Gallery Item" : "Add Gallery Item"} onClose={onClose}>
-      <div className="space-y-4">
-        <Input label="Title / Label *" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="e.g. Gold Trophy Display" required />
-        <Select label="Category *" value={form.cat} onChange={(e) => setForm({ ...form, cat: e.target.value })}>
-          {GALLERY_CATS.map((c) => <option key={c}>{c}</option>)}
-        </Select>
-        <ImageUploadField label="Gallery Image" value={form.imgUrl} onChange={(url) => setForm({ ...form, imgUrl: url })} />
-
-        {/* Product link */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-semibold text-gray-700">
-            Link to Product <span className="text-gray-400 font-normal">(optional)</span>
-          </label>
-          <p className="text-xs text-gray-500 -mt-0.5">
-            When linked, a visitor who opens this image in the gallery can click "Open Product Page" to go directly to that product. Leave as <em>None</em> for store, staff, or event photos that are not tied to a specific product.
-          </p>
-          <select
-            value={form.linkedProductId || ""}
-            onChange={(e) =>
-              setForm({ ...form, linkedProductId: e.target.value || undefined })
-            }
-            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
-          >
-            <option value="">None — store / staff / event image</option>
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} ({p.cat})
-              </option>
-            ))}
-          </select>
-          {form.linkedProductId && (
-            <div
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium"
-              style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", color: "#1D4ED8" }}
-            >
-              🔗 Linked to: {products.find((p) => p.id === form.linkedProductId)?.name || form.linkedProductId}
-            </div>
-          )}
-        </div>
-
-        <div className="flex justify-end gap-3 pt-2">
-          <button onClick={onClose} className="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
-          <button
-            onClick={() => { if (form.label) onSave(form); }}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:shadow-lg"
-            style={{ background: "linear-gradient(135deg, #2563EB, #1D4ED8)" }}
-          >
-            {initial ? "Save Changes" : "Add Item"}
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function AdminGallery({ gallery, setGallery, products }: { gallery: GalleryItem[]; setGallery: (g: GalleryItem[]) => void; products: AdminProduct[] }) {
-  const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<GalleryItem | null>(null);
-  const [deleting, setDeleting] = useState<GalleryItem | null>(null);
-  const [catFilter, setCatFilter] = useState("All");
-  const [search, setSearch] = useState("");
-
-  const filtered = gallery.filter((g) =>
-    (catFilter === "All" || g.cat === catFilter) &&
-    g.label.toLowerCase().includes(search.toLowerCase())
-  );
-
-  function handleSave(data: Omit<GalleryItem, "id">) {
-    if (editing) {
-      setGallery(gallery.map((g) => g.id === editing.id ? { ...data, id: editing.id } : g));
-    } else {
-      setGallery([...gallery, { ...data, id: `gal-${Date.now()}` }]);
-    }
-    setShowModal(false);
-    setEditing(null);
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800" style={{ fontFamily: "Poppins, sans-serif" }}>Gallery</h1>
-          <p className="text-gray-500 text-sm mt-0.5">{gallery.length} items in gallery</p>
-        </div>
-        <button
-          onClick={() => { setEditing(null); setShowModal(true); }}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:shadow-lg active:scale-95"
-          style={{ background: "linear-gradient(135deg, #2563EB, #1D4ED8)" }}
-        >
-          <Plus size={18} /> Add Item
-        </button>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search gallery..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 bg-white" />
-        </div>
-        <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 bg-white">
-          <option value="All">All Categories</option>
-          {GALLERY_CATS.map((c) => <option key={c}>{c}</option>)}
-        </select>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((item) => (
-          <div key={item.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group hover:shadow-md transition-all">
-            <div className="aspect-video bg-gradient-to-br from-blue-50 to-blue-100 relative overflow-hidden">
-              {item.imgUrl ? (
-                <img src={item.imgUrl} alt={item.label} className="w-full h-full object-cover" />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Image size={32} className="text-blue-200" />
-                </div>
-              )}
-              <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => { setEditing(item); setShowModal(true); }} className="p-1.5 rounded-lg bg-white shadow-sm text-gray-600 hover:text-blue-600">
-                  <Pencil size={14} />
-                </button>
-                <button onClick={() => setDeleting(item)} className="p-1.5 rounded-lg bg-white shadow-sm text-gray-600 hover:text-red-600">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-            <div className="p-4">
-              <div className="font-semibold text-gray-800 text-sm mb-2">{item.label}</div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-green-50 text-green-700">{item.cat}</span>
-                {item.linkedProductId ? (
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 flex items-center gap-1">
-                    🔗 {products.find((p) => p.id === item.linkedProductId)?.name || "Product"}
-                  </span>
-                ) : (
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">
-                    No product link
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-        {/* Add placeholder */}
-        <button
-          onClick={() => { setEditing(null); setShowModal(true); }}
-          className="bg-white rounded-2xl border-2 border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50/30 transition-all flex flex-col items-center justify-center gap-2 aspect-video sm:aspect-auto sm:min-h-[160px]"
-        >
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-            <Plus size={20} className="text-blue-500" />
-          </div>
-          <span className="text-sm text-gray-500 font-medium">Add Gallery Item</span>
-        </button>
-      </div>
-
-      {filtered.length === 0 && gallery.length > 0 && (
-        <div className="text-center py-12 text-gray-400 text-sm">No items match your filters.</div>
-      )}
-
-      {showModal && (
-        <GalleryModal initial={editing ?? undefined} onSave={handleSave} onClose={() => { setShowModal(false); setEditing(null); }} products={products} />
-      )}
-      {deleting && (
-        <ConfirmModal message={`Delete "${deleting.label}" from gallery?`} onConfirm={() => { setGallery(gallery.filter((g) => g.id !== deleting.id)); setDeleting(null); }} onCancel={() => setDeleting(null)} />
-      )}
-    </div>
-  );
-}
-
-// ── Testimonials Panel ────────────────────────────────────────────────────────
-function TestimonialModal({
-  initial,
-  onSave,
-  onClose,
-}: {
-  initial?: Testimonial;
-  onSave: (t: Omit<Testimonial, "id">) => void;
-  onClose: () => void;
-}) {
-  const [form, setForm] = useState<Omit<Testimonial, "id">>(
-    initial ? { name: initial.name, company: initial.company, text: initial.text, rating: initial.rating }
-      : { name: "", company: "", text: "", rating: 5 }
-  );
-
-  return (
-    <Modal title={initial ? "Edit Testimonial" : "Add Testimonial"} onClose={onClose}>
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Customer Name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Ramesh Sharma" required />
-          <Input label="Company / Organization" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="e.g. Pokhara Academy" />
-        </div>
-        <Textarea label="Review / Testimonial *" value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} rows={4} placeholder="Customer review text..." required />
-        <div>
-          <label className="text-sm font-semibold text-gray-700 block mb-2">Rating</label>
-          <div className="flex gap-2">
-            {[1, 2, 3, 4, 5].map((r) => (
-              <button key={r} onClick={() => setForm({ ...form, rating: r })} className="transition-transform hover:scale-110">
-                <Star size={28} fill={r <= form.rating ? "#D4AF37" : "none"} color={r <= form.rating ? "#D4AF37" : "#D1D5DB"} />
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="flex justify-end gap-3 pt-2">
-          <button onClick={onClose} className="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
-          <button
-            onClick={() => { if (form.name && form.text) onSave(form); }}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:shadow-lg"
-            style={{ background: "linear-gradient(135deg, #2563EB, #1D4ED8)" }}
-          >
-            {initial ? "Save Changes" : "Add Testimonial"}
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function AdminTestimonials({ testimonials, setTestimonials }: { testimonials: Testimonial[]; setTestimonials: (t: Testimonial[]) => void }) {
-  const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<Testimonial | null>(null);
-  const [deleting, setDeleting] = useState<Testimonial | null>(null);
-
-  function handleSave(data: Omit<Testimonial, "id">) {
-    if (editing) {
-      setTestimonials(testimonials.map((t) => t.id === editing.id ? { ...data, id: editing.id } : t));
-    } else {
-      setTestimonials([...testimonials, { ...data, id: `test-${Date.now()}` }]);
-    }
-    setShowModal(false);
-    setEditing(null);
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800" style={{ fontFamily: "Poppins, sans-serif" }}>Testimonials</h1>
-          <p className="text-gray-500 text-sm mt-0.5">{testimonials.length} customer reviews</p>
-        </div>
-        <button
-          onClick={() => { setEditing(null); setShowModal(true); }}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:shadow-lg active:scale-95"
-          style={{ background: "linear-gradient(135deg, #2563EB, #1D4ED8)" }}
-        >
-          <Plus size={18} /> Add Testimonial
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {testimonials.map((t) => (
-          <div key={t.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-4 hover:shadow-md transition-all">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((r) => (
-                  <Star key={r} size={14} fill={r <= t.rating ? "#D4AF37" : "none"} color={r <= t.rating ? "#D4AF37" : "#D1D5DB"} />
-                ))}
-              </div>
-              <div className="flex gap-1">
-                <button onClick={() => { setEditing(t); setShowModal(true); }} className="p-1.5 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors">
-                  <Pencil size={14} />
-                </button>
-                <button onClick={() => setDeleting(t)} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-            <p className="text-gray-600 text-sm leading-relaxed flex-1 italic">"{t.text}"</p>
-            <div className="border-t border-gray-50 pt-3">
-              <div className="font-semibold text-gray-800 text-sm">{t.name}</div>
-              <div className="text-xs text-gray-500">{t.company}</div>
-            </div>
-          </div>
-        ))}
-        <button
-          onClick={() => { setEditing(null); setShowModal(true); }}
-          className="bg-white rounded-2xl border-2 border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50/30 transition-all flex flex-col items-center justify-center gap-2 min-h-[200px]"
-        >
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-            <Plus size={20} className="text-blue-500" />
-          </div>
-          <span className="text-sm text-gray-500 font-medium">Add Review</span>
-        </button>
-      </div>
-
-      {showModal && (
-        <TestimonialModal initial={editing ?? undefined} onSave={handleSave} onClose={() => { setShowModal(false); setEditing(null); }} />
-      )}
-      {deleting && (
-        <ConfirmModal message={`Delete testimonial from "${deleting.name}"?`} onConfirm={() => { setTestimonials(testimonials.filter((t) => t.id !== deleting.id)); setDeleting(null); }} onCancel={() => setDeleting(null)} />
-      )}
-    </div>
-  );
-}
-
-// ── Quote Requests Panel ──────────────────────────────────────────────────────
-function AdminQuotes({ quotes, setQuotes }: { quotes: QuoteRequest[]; setQuotes: (q: QuoteRequest[]) => void }) {
-  const [viewing, setViewing] = useState<QuoteRequest | null>(null);
-  const [statusFilter, setStatusFilter] = useState<"all" | QuoteRequest["status"]>("all");
-  const [search, setSearch] = useState("");
-
-  const filtered = quotes.filter((q) =>
-    (statusFilter === "all" || q.status === statusFilter) &&
-    (q.name.toLowerCase().includes(search.toLowerCase()) || q.product.toLowerCase().includes(search.toLowerCase()) || q.email.toLowerCase().includes(search.toLowerCase()))
-  );
-
-  function updateStatus(id: string, status: QuoteRequest["status"]) {
-    const quote = quotes.find((q) => q.id === id);
-    setQuotes(quotes.map((q) => q.id === id ? { ...q, status } : q));
-    if (viewing?.id === id) setViewing((v) => v ? { ...v, status } : null);
-    if (quote && quote.email) {
-      const statusLabels: Record<QuoteRequest["status"], string> = {
-        new: "Received",
-        reviewed: "Under Review",
-        quoted: "Price Quoted",
-        closed: "Closed",
-      };
-      const statusMessages: Record<QuoteRequest["status"], string> = {
-        new: "Your quote request has been received and is in our queue.",
-        reviewed: "Our team is currently reviewing your quote request.",
-        quoted: "We have prepared a price quote for your request. Our team will contact you shortly.",
-        closed: "Your quote request has been closed. Thank you for your interest.",
-      };
-      sendNotificationEmail(
-        quote.email,
-        `Your Quote Request Update — Crystal Digital Art & Award House`,
-        {
-          Dear_Customer: quote.name,
-          Product: quote.product,
-          Selected_Size: quote.size || "Not specified",
-          Status: statusLabels[status],
-          Message: statusMessages[status],
-          Contact_Us: "Call +977-61-XXXXXX or visit crystaldigital.com.np",
-        }
-      );
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800" style={{ fontFamily: "Poppins, sans-serif" }}>Quote Requests</h1>
-        <p className="text-gray-500 text-sm mt-0.5">{quotes.filter((q) => q.status === "new").length} new, {quotes.length} total</p>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, product, email..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 bg-white" />
-        </div>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 bg-white">
-          <option value="all">All Status</option>
-          <option value="new">New</option>
-          <option value="reviewed">Reviewed</option>
-          <option value="quoted">Quoted</option>
-          <option value="closed">Closed</option>
-        </select>
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto no-scrollbar" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Customer</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Product</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Date</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="text-right px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filtered.map((q) => (
-                <tr key={q.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-5 py-4">
-                    <div className="font-semibold text-gray-800 text-sm">{q.name}</div>
-                    <div className="text-gray-500 text-xs">{q.email}</div>
-                  </td>
-                  <td className="px-5 py-4 hidden sm:table-cell">
-                    <span className="text-sm text-gray-700">{q.product}</span>
-                  </td>
-                  <td className="px-5 py-4 hidden md:table-cell">
-                    <span className="text-xs text-gray-500">{q.date}</span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <Badge status={q.status} />
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => setViewing(q)} className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors">
-                        <Eye size={15} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={5} className="px-5 py-12 text-center text-gray-400 text-sm">No quote requests found.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* View modal */}
-      {viewing && (
-        <Modal title="Quote Request Details" onClose={() => setViewing(null)}>
-          <div className="space-y-5">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                <User size={20} className="text-blue-600" />
-              </div>
-              <div>
-                <div className="font-bold text-gray-800">{viewing.name}</div>
-                <div className="text-sm text-gray-500">{viewing.email} · {viewing.phone}</div>
-              </div>
-              <div className="ml-auto"><Badge status={viewing.status} /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-gray-50">
-              <div><div className="text-xs text-gray-500 mb-1">Product Interested In</div><div className="font-semibold text-gray-800 text-sm">{viewing.product}</div></div>
-              <div><div className="text-xs text-gray-500 mb-1">Request Date</div><div className="font-semibold text-gray-800 text-sm">{viewing.date}</div></div>
-              <div className="col-span-2">
-                <div className="text-xs text-gray-500 mb-1">Selected Size</div>
-                {viewing.size ? (
-                  <span
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold"
-                    style={{ background: "#EFF6FF", color: "#1D4ED8", border: "1px solid #BFDBFE" }}
-                  >
-                    {viewing.size}
-                  </span>
-                ) : (
-                  <span className="text-sm text-gray-400 italic">Not specified by customer</span>
-                )}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Message</div>
-              <p className="text-gray-700 text-sm leading-relaxed bg-gray-50 rounded-xl p-4">{viewing.message}</p>
-            </div>
-            <div>
-              <div className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Update Status</div>
-              <div className="flex flex-wrap gap-2">
-                {(["new", "reviewed", "quoted", "closed"] as QuoteRequest["status"][]).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => updateStatus(viewing.id, s)}
-                    className="px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all border"
-                    style={{
-                      background: viewing.status === s ? STATUS_COLORS[s] : "white",
-                      color: viewing.status === s ? "white" : STATUS_COLORS[s],
-                      borderColor: STATUS_COLORS[s],
-                    }}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </Modal>
-      )}
-    </div>
-  );
-}
-
-// ── Settings Panel ────────────────────────────────────────────────────────────
-function AdminSettings({ settings, setSettings }: { settings: SiteSettings; setSettings: (s: SiteSettings) => void }) {
-  const [form, setForm] = useState({ ...settings });
-  const [saved, setSaved] = useState(false);
-
-  function handleSave() {
-    setSettings(form);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-  }
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800" style={{ fontFamily: "Poppins, sans-serif" }}>Settings</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Manage your business information and site settings.</p>
-      </div>
-
-      {saved && (
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-200">
-          <CheckCircle size={18} className="text-green-600" />
-          <p className="text-green-700 text-sm font-medium">Settings saved successfully!</p>
-        </div>
-      )}
-
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
-        <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide" style={{ fontFamily: "Poppins, sans-serif" }}>Business Information</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Business Name" value={form.businessName} onChange={(e) => setForm({ ...form, businessName: e.target.value })} />
-          <Input label="Tagline" value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Phone Number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-          <Input label="Email Address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-        </div>
-        <Input label="WhatsApp Number" value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} />
-        <Textarea label="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} rows={2} />
-        <Input label="Working Hours" value={form.workingHours} onChange={(e) => setForm({ ...form, workingHours: e.target.value })} placeholder="e.g. Mon–Fri: 9AM–7PM" />
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
-        <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide" style={{ fontFamily: "Poppins, sans-serif" }}>Social & Map Links</h2>
-        <Input label="Facebook Page URL" value={form.facebookUrl} onChange={(e) => setForm({ ...form, facebookUrl: e.target.value })} placeholder="https://facebook.com/..." />
-        <Input label="Google Maps Link" value={form.mapLink} onChange={(e) => setForm({ ...form, mapLink: e.target.value })} placeholder="https://maps.google.com/..." />
-      </div>
-
-      <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5 flex items-start gap-3">
-        <AlertCircle size={18} className="text-amber-600 mt-0.5 flex-shrink-0" />
-        <p className="text-amber-700 text-sm">Settings are saved locally. In a production environment, these would sync to your backend database.</p>
-      </div>
-
-      <div className="flex justify-end">
-        <button
-          onClick={handleSave}
-          className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:shadow-lg active:scale-95"
-          style={{ background: "linear-gradient(135deg, #2563EB, #1D4ED8)" }}
-        >
-          <Save size={16} /> Save Settings
-        </button>
-      </div>
-    </div>
   );
 }
 

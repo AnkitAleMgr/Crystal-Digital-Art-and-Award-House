@@ -30,7 +30,10 @@ npm run build      # production build (verifies everything compiles/bundles)
   - `GalleryPage.tsx` — lightbox gallery that links images to products
   - `ContactPage.tsx` — contact/quote form (posts a WhatsApp-style message)
   - `ProductDetailPage.tsx` — single product view (size select + QuoteModal)
-- `src/app/admin/AdminApp.tsx` — **monolithic admin dashboard (1690 lines)** loading settings, products, gallery, testimonials, quotes from localStorage. *Planned: split into types/data/constants + components/{ui,layout,panels}.*
+- `src/app/admin/AdminApp.tsx` — **monolithic admin dashboard** loading settings, products, gallery, testimonials, quotes from localStorage. *Planned: split into types/data/constants + components/{ui,layout,panels}.* Progress so far:
+  - `src/app/admin/types/interface/<area>/` — TypeScript interfaces (product, quote, gallery, testimonial, settings)
+  - `src/app/admin/pages/` — one file per dashboard panel: `DashBoard.tsx` (`AdminOverview`), `adminProduct.tsx` (`AdminProducts` + `ProductModal` + `emptyProduct`), `quoteRequest.tsx` (`AdminQuotes`), `galleryModal.tsx` (`AdminGallery` + `GalleryModal`), `testimonials.tsx` (`AdminTestimonials` + `TestimonialModal`), `setting.tsx` (`AdminSettings`)
+  - Shared admin UI lives in `AdminApp.tsx` and is `export`ed from there (`Badge`, `Modal`, `ConfirmModal`, `Input`, `Textarea`, `Select`, `ImageUploadField`, `PRODUCT_CATS`, `GALLERY_CATS`, `STATUS_COLORS`, `load`, `save`, `sendNotificationEmail`, `AdminSection` type). Pages import them from `../AdminApp`.
 
 ### Client structure (the refactor pattern we follow)
 ```
