@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Testimonial } from "../types/interface/testimonials/testimonials";
 import { Pencil, Plus, Star, Trash2 } from "lucide-react";
-import { ConfirmModal, Input, Modal, Textarea } from "../AdminApp";
+import { ConfirmModal } from "../components/ui/confirmModal";
+import { Input } from "../components/ui/input";
+import { Modal } from "../components/ui/modal";
+import { Textarea } from "../components/ui/Textarea";
 
 function TestimonialModal({
   initial,

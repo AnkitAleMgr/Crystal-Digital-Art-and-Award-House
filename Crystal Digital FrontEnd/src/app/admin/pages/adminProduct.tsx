@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { AdminProduct } from "../types/interface/production/adminProduct";
-import { ConfirmModal, ImageUploadField, Input, load, Modal, PRODUCT_CATS, Select, sendNotificationEmail, Textarea } from "../AdminApp";
+import { ConfirmModal } from "../components/ui/confirmModal";
+import { ImageUploadField } from "../components/ui/imageUploadField";
+import { Input } from "../components/ui/input";
+import { Modal } from "../components/ui/modal";
+import { Select } from "../components/ui/select";
+import { Textarea } from "../components/ui/Textarea";
+import { load } from "../utils/storage";
+import { sendNotificationEmail } from "../utils/sendNotification";
+import { PRODUCT_CATS } from "../constants/admin";
 import { Pencil, Plus, Search, Tag, Trash2, X } from "lucide-react";
 
 // ── Products Panel ────────────────────────────────────────────────────────────

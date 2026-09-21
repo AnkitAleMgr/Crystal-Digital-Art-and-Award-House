@@ -30,10 +30,15 @@ npm run build      # production build (verifies everything compiles/bundles)
   - `GalleryPage.tsx` — lightbox gallery that links images to products
   - `ContactPage.tsx` — contact/quote form (posts a WhatsApp-style message)
   - `ProductDetailPage.tsx` — single product view (size select + QuoteModal)
-- `src/app/admin/AdminApp.tsx` — **monolithic admin dashboard** loading settings, products, gallery, testimonials, quotes from localStorage. *Planned: split into types/data/constants + components/{ui,layout,panels}.* Progress so far:
-  - `src/app/admin/types/interface/<area>/` — TypeScript interfaces (product, quote, gallery, testimonial, settings)
-  - `src/app/admin/pages/` — one file per dashboard panel: `DashBoard.tsx` (`AdminOverview`), `adminProduct.tsx` (`AdminProducts` + `ProductModal` + `emptyProduct`), `quoteRequest.tsx` (`AdminQuotes`), `galleryModal.tsx` (`AdminGallery` + `GalleryModal`), `testimonials.tsx` (`AdminTestimonials` + `TestimonialModal`), `setting.tsx` (`AdminSettings`)
-  - Shared admin UI lives in `AdminApp.tsx` and is `export`ed from there (`Badge`, `Modal`, `ConfirmModal`, `Input`, `Textarea`, `Select`, `ImageUploadField`, `PRODUCT_CATS`, `GALLERY_CATS`, `STATUS_COLORS`, `load`, `save`, `sendNotificationEmail`, `AdminSection` type). Pages import them from `../AdminApp`.
+- `src/app/admin/` — **admin dashboard, fully split** out of the former monolithic `AdminApp.tsx`. Layout mirrors the client refactor pattern (types/ data/ constants/ hooks/ components/{ui,layout} pages/). Current structure:
+  - `types/interface/<area>/` — TypeScript interfaces (product, quote, gallery, testimonial, setting: `adminProduct.ts`, `quoteRequest.ts`, `gakkeryItem.ts`, `testimonials.ts`, `siteSetting.ts`)
+  - `data/seed.ts` — seed/"database" data (`SEED_PRODUCTS`, `SEED_GALLERY`, `SEED_TESTIMONIALS`, `SEED_QUOTES`, `SEED_SETTINGS`)
+  - `constants/admin.tsx` — admin constants + nav: `PRODUCT_CATS`, `GALLERY_CATS`, `STATUS_COLORS`, `STATUS_BG`, `NAV_ITEMS`, `ADMIN_USER`/`ADMIN_PASS`, and the `AdminSection` type. **Must stay `.tsx`** because `NAV_ITEMS` contains JSX icon elements (JSX doesn't parse in `.ts` files).
+  - `utils/storage.tsx` — `load`/`save` localStorage helpers; `utils/sendNotification.tsx` — `sendNotificationEmail`
+  - `components/ui/` — one file per admin UI primitive: `badge.tsx` (`Badge`), `modal.tsx` (`Modal`), `confirmModal.tsx` (`ConfirmModal`), `input.tsx` (`Input`), `Textarea.tsx` (`Textarea`), `select.tsx` (`Select`), `imageUploadField.tsx` (`ImageUploadField`)
+  - `components/layout/` — admin chrome: `adminLogin.tsx` (`AdminLogin`), `sidebar.tsx` (`Sidebar`), `adminDashboard.tsx` (`AdminDashboard` — the shell that owns admin state, loads seeds from localStorage, renders pages by `section`)
+  - `pages/` — one file per dashboard panel: `DashBoard.tsx` (<code>AdminOverview</code>), `adminProduct.tsx` (`AdminProducts` + `ProductModal` + `emptyProduct`), `quoteRequest.tsx` (`AdminQuotes`), `galleryModal.tsx` (`AdminGallery` + `GalleryModal`), `testimonials.tsx` (`AdminTestimonials` + `TestimonialModal`), `setting.tsx` (`AdminSettings`)
+  - `AdminApp.tsx` — reduced to the auth gate: default export `AdminApp`, `sessionStorage["cdaah_admin"]`, renders `AdminLogin` or `AdminDashboard` (imports both from `components/layout/`). **No shared UI anymore** — pages import primitives from `../components/ui/*`, constants from `../constants/admin`, storage from `../utils/storage`. Watch out — `AdminApp`/pages importing both `../AdminApp` and `../constants/admin` previously caused a circular-import TS error (icons misread as types); `AdminSection` etc. are defined only in constants.
 
 ### Client structure (the refactor pattern we follow)
 ```

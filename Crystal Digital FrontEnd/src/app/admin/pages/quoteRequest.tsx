@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { QuoteRequest } from "../types/interface/quoteRequest/quoteRequest";
-import { Badge, Modal, sendNotificationEmail, STATUS_COLORS } from "../AdminApp";
+import { Badge } from "../components/ui/badge";
+import { Modal } from "../components/ui/modal";
+import { sendNotificationEmail } from "../utils/sendNotification";
+import { STATUS_COLORS } from "../constants/admin";
 import { Eye, Search, User } from "lucide-react";
 
 // ── Quote Requests Panel ──────────────────────────────────────────────────────

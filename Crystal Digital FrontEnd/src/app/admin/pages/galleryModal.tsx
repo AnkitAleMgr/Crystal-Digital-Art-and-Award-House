@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { GalleryItem } from "../types/interface/gallery/gakkeryItem";
 import { AdminProduct } from "../types/interface/production/adminProduct";
-import { ConfirmModal, GALLERY_CATS, ImageUploadField, Input, Modal, Select } from "../AdminApp";
+import { ConfirmModal } from "../components/ui/confirmModal";
+import { ImageUploadField } from "../components/ui/imageUploadField";
+import { Input } from "../components/ui/input";
+import { Modal } from "../components/ui/modal";
+import { Select } from "../components/ui/select";
+import { GALLERY_CATS } from "../constants/admin";
 import { Image, Pencil, Plus, Search, Trash2 } from "lucide-react";
 
 function GalleryModal({

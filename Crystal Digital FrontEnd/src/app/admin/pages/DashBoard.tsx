@@ -3,7 +3,8 @@ import { GalleryItem } from "../types/interface/gallery/gakkeryItem";
 import { AdminProduct } from "../types/interface/production/adminProduct";
 import { QuoteRequest } from "../types/interface/quoteRequest/quoteRequest";
 import { Testimonial } from "../types/interface/testimonials/testimonials";
-import { AdminSection, Badge } from "../AdminApp";
+import { AdminSection } from "../constants/admin";
+import { Badge } from "../components/ui/badge";
 
 // ── Overview ──────────────────────────────────────────────────────────────────
 export function AdminOverview({

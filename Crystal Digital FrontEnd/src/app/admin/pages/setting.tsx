@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { SiteSettings } from "../types/interface/setting/siteSetting";
-import { Input, Textarea } from "../AdminApp";
+import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/Textarea";
 import { AlertCircle, CheckCircle, Save } from "lucide-react";
 
 // ── Settings Panel ────────────────────────────────────────────────────────────
