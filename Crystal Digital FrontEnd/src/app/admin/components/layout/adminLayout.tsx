@@ -1,45 +1,18 @@
 import React, { useState } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { ChevronLeft, LogOut, Menu, MessageSquare } from "lucide-react";
-import { AdminProduct } from "../../types/interface/production/adminProduct";
-import { GalleryItem } from "../../types/interface/gallery/gakkeryItem";
-import { Testimonial } from "../../types/interface/testimonials/testimonials";
-import { QuoteRequest } from "../../types/interface/quoteRequest/quoteRequest";
-import { SiteSettings } from "../../types/interface/setting/siteSetting";
-import { AdminOverview } from "../../pages/DashBoard";
-import { AdminProducts } from "../../pages/adminProduct";
-import { AdminGallery } from "../../pages/galleryModal";
-import { AdminTestimonials } from "../../pages/testimonials";
-import { AdminQuotes } from "../../pages/quoteRequest";
-import { AdminSettings } from "../../pages/setting";
-import { SEED_GALLERY, SEED_PRODUCTS, SEED_QUOTES, SEED_SETTINGS, SEED_TESTIMONIALS } from "../../data/seed";
 import { AdminSection, NAV_ITEMS } from "../../constants/admin";
-import { load, save } from "../../utils/storage";
+import { useAdmin } from "./adminProvider";
 import { Sidebar } from "./sidebar";
 
-export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
-  const [section, setSection] = useState<AdminSection>("overview");
+export function AdminLayout() {
+  const { onLogout, quoteCount } = useAdmin();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"logout" | "viewSite" | null>(null);
 
-  const [products, setProductsState] = useState<AdminProduct[]>(() => load("cdaah_products", SEED_PRODUCTS));
-  const [gallery, setGalleryState] = useState<GalleryItem[]>(() => load("cdaah_gallery", SEED_GALLERY));
-  const [testimonials, setTestimonialsState] = useState<Testimonial[]>(() => load("cdaah_testimonials", SEED_TESTIMONIALS));
-  const [quotes, setQuotesState] = useState<QuoteRequest[]>(() => {
-    const stored = load("cdaah_quotes", SEED_QUOTES);
-    if (!stored.find((q) => q.id === "q5")) {
-      const merged = [...stored, SEED_QUOTES[SEED_QUOTES.length - 1]];
-      save("cdaah_quotes", merged);
-      return merged;
-    }
-    return stored;
-  });
-  const [settings, setSettingsState] = useState<SiteSettings>(() => load("cdaah_settings", SEED_SETTINGS));
-
-  function setProducts(p: AdminProduct[]) { setProductsState(p); save("cdaah_products", p); }
-  function setGallery(g: GalleryItem[]) { setGalleryState(g); save("cdaah_gallery", g); }
-  function setTestimonials(t: Testimonial[]) { setTestimonialsState(t); save("cdaah_testimonials", t); }
-  function setQuotes(q: QuoteRequest[]) { setQuotesState(q); save("cdaah_quotes", q); }
-  function setSettings(s: SiteSettings) { setSettingsState(s); save("cdaah_settings", s); }
+  const section = sectionFromPath(location.pathname);
 
   function handleConfirm() {
     if (confirmAction === "logout") onLogout();
@@ -47,12 +20,10 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     setConfirmAction(null);
   }
 
-  const newQuoteCount = quotes.filter((q) => q.status === "new").length;
-
   return (
     <div className="min-h-screen bg-gray-50" style={{ fontFamily: "Inter, sans-serif" }}>
       <style>{`.no-scrollbar::-webkit-scrollbar{display:none}`}</style>
-      {/* Confirmation dialog */}
+
       {confirmAction && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setConfirmAction(null)} />
@@ -93,18 +64,9 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         </div>
       )}
 
-      <Sidebar
-        section={section}
-        setSection={setSection}
-        onLogout={() => setConfirmAction("logout")}
-        mobileOpen={mobileMenuOpen}
-        setMobileOpen={setMobileMenuOpen}
-        quoteCount={newQuoteCount}
-      />
+      <Sidebar mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen} onLogout={() => setConfirmAction("logout")} />
 
-      {/* Main content */}
       <div className="lg:pl-64 min-h-screen flex flex-col">
-        {/* Top bar */}
         <header className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
           <div className="flex items-center justify-between px-4 sm:px-6 py-4">
             <div className="flex items-center gap-3">
@@ -119,10 +81,10 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {newQuoteCount > 0 && (
-                <button onClick={() => setSection("quotes")} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition-colors">
+              {quoteCount > 0 && (
+                <button onClick={() => navigate("/admin/quotes")} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition-colors">
                   <MessageSquare size={14} />
-                  {newQuoteCount} new
+                  {quoteCount} new
                 </button>
               )}
               <button
@@ -142,28 +104,15 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           </div>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 p-4 sm:p-6">
-          {section === "overview" && (
-            <AdminOverview products={products} gallery={gallery} testimonials={testimonials} quotes={quotes} setSection={setSection} />
-          )}
-          {section === "products" && (
-            <AdminProducts products={products} setProducts={setProducts} />
-          )}
-          {section === "gallery" && (
-            <AdminGallery gallery={gallery} setGallery={setGallery} products={products} />
-          )}
-          {section === "testimonials" && (
-            <AdminTestimonials testimonials={testimonials} setTestimonials={setTestimonials} />
-          )}
-          {section === "quotes" && (
-            <AdminQuotes quotes={quotes} setQuotes={setQuotes} />
-          )}
-          {section === "settings" && (
-            <AdminSettings settings={settings} setSettings={setSettings} />
-          )}
+          <Outlet />
         </main>
       </div>
     </div>
   );
+}
+
+function sectionFromPath(pathname: string): AdminSection {
+  const last = pathname.split("/").filter(Boolean)[1] ?? "overview";
+  return NAV_ITEMS.some((n) => n.id === last) ? (last as AdminSection) : "overview";
 }

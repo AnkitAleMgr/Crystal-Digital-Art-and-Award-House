@@ -7,6 +7,7 @@ import { Input } from "../components/ui/input";
 import { Modal } from "../components/ui/modal";
 import { Select } from "../components/ui/select";
 import { GALLERY_CATS } from "../constants/admin";
+import { useAdmin } from "../components/layout/adminProvider";
 import { Image, Pencil, Plus, Search, Trash2 } from "lucide-react";
 
 function GalleryModal({
@@ -82,7 +83,8 @@ function GalleryModal({
   );
 }
 
-export function AdminGallery({ gallery, setGallery, products }: { gallery: GalleryItem[]; setGallery: (g: GalleryItem[]) => void; products: AdminProduct[] }) {
+export function AdminGallery() {
+  const { gallery, setGallery, products } = useAdmin();
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<GalleryItem | null>(null);
   const [deleting, setDeleting] = useState<GalleryItem | null>(null);

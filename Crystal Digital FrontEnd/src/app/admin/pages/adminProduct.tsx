@@ -8,6 +8,7 @@ import { Select } from "../components/ui/select";
 import { Textarea } from "../components/ui/Textarea";
 import { load } from "../utils/storage";
 import { sendNotificationEmail } from "../utils/sendNotification";
+import { useAdmin } from "../components/layout/adminProvider";
 import { PRODUCT_CATS } from "../constants/admin";
 import { Pencil, Plus, Search, Tag, Trash2, X } from "lucide-react";
 
@@ -205,7 +206,8 @@ function ProductModal({
   );
 }
 
-export function AdminProducts({ products, setProducts }: { products: AdminProduct[]; setProducts: (p: AdminProduct[]) => void }) {
+export function AdminProducts() {
+  const { products, setProducts } = useAdmin();
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<AdminProduct | null>(null);

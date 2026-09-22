@@ -4,10 +4,12 @@ import { Badge } from "../components/ui/badge";
 import { Modal } from "../components/ui/modal";
 import { sendNotificationEmail } from "../utils/sendNotification";
 import { STATUS_COLORS } from "../constants/admin";
+import { useAdmin } from "../components/layout/adminProvider";
 import { Eye, Search, User } from "lucide-react";
 
 // ── Quote Requests Panel ──────────────────────────────────────────────────────
-export function AdminQuotes({ quotes, setQuotes }: { quotes: QuoteRequest[]; setQuotes: (q: QuoteRequest[]) => void }) {
+export function AdminQuotes() {
+  const { quotes, setQuotes } = useAdmin();
   const [viewing, setViewing] = useState<QuoteRequest | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | QuoteRequest["status"]>("all");
   const [search, setSearch] = useState("");

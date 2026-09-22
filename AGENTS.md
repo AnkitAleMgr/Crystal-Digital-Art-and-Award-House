@@ -22,7 +22,7 @@ npm run build      # production build (verifies everything compiles/bundles)
 
 ### App shell & routing
 - `src/main.tsx` — entry, mounts `<BrowserRouter>` + `<App />`
-- `src/app/App.tsx` — all routes (public site wrapped in `Layout`, admin at `/admin/*`)
+- `src/app/App.tsx` — all routes: public site wrapped in client `Layout`; admin routes nested under `/admin` → `<AdminProvider>` wrapping `AdminApp` (auth gate) → `<AdminLayout>` blueprint → `/`, `/products`, `/gallery`, `/testimonials`, `/quotes`, `/settings` page routes
 - `src/app/client/Layout.tsx` — global layout shell: `GlobalStyles` → `Navbar` → `<Outlet/>` → `Footer` → `BackToTop`
 - `src/app/client/pages/` — **page components** (one per route):
   - `HomePage.tsx` — assembles the home sections
@@ -36,9 +36,9 @@ npm run build      # production build (verifies everything compiles/bundles)
   - `constants/admin.tsx` — admin constants + nav: `PRODUCT_CATS`, `GALLERY_CATS`, `STATUS_COLORS`, `STATUS_BG`, `NAV_ITEMS`, `ADMIN_USER`/`ADMIN_PASS`, and the `AdminSection` type. **Must stay `.tsx`** because `NAV_ITEMS` contains JSX icon elements (JSX doesn't parse in `.ts` files).
   - `utils/storage.tsx` — `load`/`save` localStorage helpers; `utils/sendNotification.tsx` — `sendNotificationEmail`
   - `components/ui/` — one file per admin UI primitive: `badge.tsx` (`Badge`), `modal.tsx` (`Modal`), `confirmModal.tsx` (`ConfirmModal`), `input.tsx` (`Input`), `Textarea.tsx` (`Textarea`), `select.tsx` (`Select`), `imageUploadField.tsx` (`ImageUploadField`)
-  - `components/layout/` — admin chrome: `adminLogin.tsx` (`AdminLogin`), `sidebar.tsx` (`Sidebar`), `adminDashboard.tsx` (`AdminDashboard` — the shell that owns admin state, loads seeds from localStorage, renders pages by `section`)
-  - `pages/` — one file per dashboard panel: `DashBoard.tsx` (<code>AdminOverview</code>), `adminProduct.tsx` (`AdminProducts` + `ProductModal` + `emptyProduct`), `quoteRequest.tsx` (`AdminQuotes`), `galleryModal.tsx` (`AdminGallery` + `GalleryModal`), `testimonials.tsx` (`AdminTestimonials` + `TestimonialModal`), `setting.tsx` (`AdminSettings`)
-  - `AdminApp.tsx` — reduced to the auth gate: default export `AdminApp`, `sessionStorage["cdaah_admin"]`, renders `AdminLogin` or `AdminDashboard` (imports both from `components/layout/`). **No shared UI anymore** — pages import primitives from `../components/ui/*`, constants from `../constants/admin`, storage from `../utils/storage`. Watch out — `AdminApp`/pages importing both `../AdminApp` and `../constants/admin` previously caused a circular-import TS error (icons misread as types); `AdminSection` etc. are defined only in constants.
+  - `components/layout/` — admin chrome: `adminLogin.tsx` (`AdminLogin`), `sidebar.tsx` (`Sidebar` — router `<Link>`-based nav, active section derived from URL), `adminProvider.tsx` (`AdminProvider` context + `useAdmin()` hook — owns ALL admin state: auth (`sessionStorage["cdaah_admin"]`), products/gallery/testimonials/quotes/settings (localStorage seeds) and their setters, `quoteCount`; pages consume data via `useAdmin()` instead of props), `adminLayout.tsx` (`AdminLayout` — the blueprint: confirmation dialog + `Sidebar` + top bar header + `<main><Outlet/></main>`; no props, derives `section` from the URL path)
+  - `pages/` — one file per dashboard panel: `DashBoard.tsx` (`AdminOverview` — uses `useNavigate` instead of `setSection`), `adminProduct.tsx` (`AdminProducts` + `ProductModal` + `emptyProduct`), `quoteRequest.tsx` (`AdminQuotes`), `galleryModal.tsx` (`AdminGallery` + `GalleryModal`), `testimonials.tsx` (`AdminTestimonials` + `TestimonialModal`), `setting.tsx` (`AdminSettings`)
+  - `AdminApp.tsx` — the auth gate route element: uses `useAdmin()`; renders `AdminLogin` when not authed, otherwise `<Outlet />` (the admin routes under `AdminLayout`)
 
 ### Client structure (the refactor pattern we follow)
 ```

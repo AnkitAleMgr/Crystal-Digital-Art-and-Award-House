@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { SiteSettings } from "../types/interface/setting/siteSetting";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/Textarea";
 import { AlertCircle, CheckCircle, Save } from "lucide-react";
+import { useAdmin } from "../components/layout/adminProvider";
 
 // ── Settings Panel ────────────────────────────────────────────────────────────
-export function AdminSettings({ settings, setSettings }: { settings: SiteSettings; setSettings: (s: SiteSettings) => void }) {
+export function AdminSettings() {
+  const { settings, setSettings } = useAdmin();
   const [form, setForm] = useState({ ...settings });
   const [saved, setSaved] = useState(false);
 

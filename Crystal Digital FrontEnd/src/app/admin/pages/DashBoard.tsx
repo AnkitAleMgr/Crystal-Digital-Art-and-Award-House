@@ -1,25 +1,13 @@
+import { useNavigate } from "react-router-dom";
 import { Image, MessageSquare, Package, Star, TrendingUp } from "lucide-react";
-import { GalleryItem } from "../types/interface/gallery/gakkeryItem";
-import { AdminProduct } from "../types/interface/production/adminProduct";
-import { QuoteRequest } from "../types/interface/quoteRequest/quoteRequest";
-import { Testimonial } from "../types/interface/testimonials/testimonials";
 import { AdminSection } from "../constants/admin";
 import { Badge } from "../components/ui/badge";
+import { useAdmin } from "../components/layout/adminProvider";
 
 // ── Overview ──────────────────────────────────────────────────────────────────
-export function AdminOverview({
-  products,
-  gallery,
-  testimonials,
-  quotes,
-  setSection,
-}: {
-  products: AdminProduct[];
-  gallery: GalleryItem[];
-  testimonials: Testimonial[];
-  quotes: QuoteRequest[];
-  setSection: (s: AdminSection) => void;
-}) {
+export function AdminOverview() {
+  const { products, gallery, testimonials, quotes } = useAdmin();
+  const navigate = useNavigate();
   const newQuotes = quotes.filter((q) => q.status === "new").length;
   const stats = [
     { label: "Total Products", value: products.length, icon: <Package size={22} />, color: "#2563EB", bg: "#EFF6FF", section: "products" as AdminSection },
@@ -29,6 +17,9 @@ export function AdminOverview({
   ];
 
   const recentQuotes = quotes.slice(0, 4);
+  function go(section: AdminSection) {
+    navigate(section === "overview" ? "/admin" : `/admin/${section}`);
+  }
 
   return (
     <div className="space-y-8">
@@ -42,7 +33,7 @@ export function AdminOverview({
         {stats.map((s) => (
           <button
             key={s.label}
-            onClick={() => setSection(s.section)}
+            onClick={() => go(s.section)}
             className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 text-left hover:shadow-md transition-all group"
           >
             <div className="flex items-center justify-between mb-4">
@@ -61,7 +52,7 @@ export function AdminOverview({
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-bold text-gray-800" style={{ fontFamily: "Poppins, sans-serif" }}>Recent Quote Requests</h2>
-          <button onClick={() => setSection("quotes")} className="text-sm text-blue-600 hover:text-blue-700 font-medium">View all</button>
+          <button onClick={() => go("quotes")} className="text-sm text-blue-600 hover:text-blue-700 font-medium">View all</button>
         </div>
         <div className="divide-y divide-gray-50">
           {recentQuotes.map((q) => (
@@ -94,7 +85,7 @@ export function AdminOverview({
           ].map((a) => (
             <button
               key={a.label}
-              onClick={() => setSection(a.section)}
+              onClick={() => go(a.section)}
               className="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all"
             >
               <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${a.color}15`, color: a.color }}>

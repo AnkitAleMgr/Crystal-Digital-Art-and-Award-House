@@ -5,6 +5,7 @@ import { ConfirmModal } from "../components/ui/confirmModal";
 import { Input } from "../components/ui/input";
 import { Modal } from "../components/ui/modal";
 import { Textarea } from "../components/ui/Textarea";
+import { useAdmin } from "../components/layout/adminProvider";
 
 function TestimonialModal({
   initial,
@@ -53,7 +54,8 @@ function TestimonialModal({
   );
 }
 
-export function AdminTestimonials({ testimonials, setTestimonials }: { testimonials: Testimonial[]; setTestimonials: (t: Testimonial[]) => void }) {
+export function AdminTestimonials() {
+  const { testimonials, setTestimonials } = useAdmin();
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Testimonial | null>(null);
   const [deleting, setDeleting] = useState<Testimonial | null>(null);
