@@ -105,3 +105,7 @@ export const adminLogin=async(req,res)=>{
         
     }
 }
+
+export const getMe = (req, res) => {
+  res.status(200).json({ status: true, data: req.admin });
+};

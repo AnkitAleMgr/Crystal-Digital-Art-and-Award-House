@@ -6,7 +6,7 @@ React + Vite + TypeScript website for **Crystal Digital Art & Award House** (cry
 
 ```
 Crystal Digital copy/                 ← repo root
-├── Crystal Digital BackEnd/          ← Express API (index.js) — small, not used by the frontend yet
+├── Crystal Digital BackEnd/          ← Express + MongoDB API (index.js) — used by the frontend for admin login (`/admin/admin-login`)
 └── Crystal Digital FrontEnd/         ← the app (Vite + React + TS)
 ```
 
@@ -17,6 +17,28 @@ cd "Crystal Digital FrontEnd"
 npm run dev        # start dev server
 npm run build      # production build (verifies everything compiles/bundles)
 ```
+
+## Backend
+
+Express + MongoDB API in `Crystal Digital BackEnd/` (run with `npm run dev` inside that folder, default port 3000). Used by the frontend for admin login.
+
+```
+Crystal Digital BackEnd/
+├── index.js                     ← app entry: CORS + JSON, mounts /admin router
+├── src/
+│   ├── utils/db.js              ← DB_CONNECT (MONGO_DB_URI)
+│   ├── middleware/authMiddleware.js  ← JWT gate: verifies Bearer token, loads admin, sets req.admin
+│   └── admin/
+│       ├── route.js             ← /admin router (register, admin-login PUBLIC → middleware → protected routes)
+│       └── auth/
+│           ├── model.js         ← AdminModel (bcrypt pre-save hook, comparePassword, generateToken)
+│           └── controller.js    ← adminRegister, adminLogin, getMe
+```
+
+- Auth flow: `POST /admin/register` → `POST /admin/admin-login` (returns JWT + `{ id, email, role }`) → future requests send `Authorization: Bearer <token>`.
+- `AdminRoute.use(authMiddleware)` is mounted **after** the public routes in `route.js` — everything registered below it (currently `GET /admin/me`) is protected and returns 401 without a valid token.
+- `GET /admin/me` returns the logged-in admin from `req.admin` (set by the middleware) — a health check for the token.
+- Env: `MONGO_DB_URI`, `ACCESS_TOKEN_SECRET`, `ACCESS_TOKEN_EXPIRE` in `.env`. Tokens are signed in `model.js` `generateToken()` with payload `{ id, email, role }`.
 
 ## Where things live & what they do
 
@@ -33,10 +55,10 @@ npm run build      # production build (verifies everything compiles/bundles)
 - `src/app/admin/` — **admin dashboard, fully split** out of the former monolithic `AdminApp.tsx`. Layout mirrors the client refactor pattern (types/ data/ constants/ hooks/ components/{ui,layout} pages/). Current structure:
   - `types/interface/<area>/` — TypeScript interfaces (product, quote, gallery, testimonial, setting: `adminProduct.ts`, `quoteRequest.ts`, `gakkeryItem.ts`, `testimonials.ts`, `siteSetting.ts`)
   - `data/seed.ts` — seed/"database" data (`SEED_PRODUCTS`, `SEED_GALLERY`, `SEED_TESTIMONIALS`, `SEED_QUOTES`, `SEED_SETTINGS`)
-  - `constants/admin.tsx` — admin constants + nav: `PRODUCT_CATS`, `GALLERY_CATS`, `STATUS_COLORS`, `STATUS_BG`, `NAV_ITEMS`, `ADMIN_USER`/`ADMIN_PASS`, and the `AdminSection` type. **Must stay `.tsx`** because `NAV_ITEMS` contains JSX icon elements (JSX doesn't parse in `.ts` files).
+  - `constants/admin.tsx` — admin constants + nav: `PRODUCT_CATS`, `GALLERY_CATS`, `STATUS_COLORS`, `STATUS_BG`, `NAV_ITEMS`, and the `AdminSection` type. **Must stay `.tsx`** because `NAV_ITEMS` contains JSX icon elements (JSX doesn't parse in `.ts` files).
   - `utils/storage.tsx` — `load`/`save` localStorage helpers; `utils/sendNotification.tsx` — `sendNotificationEmail`
   - `components/ui/` — one file per admin UI primitive: `badge.tsx` (`Badge`), `modal.tsx` (`Modal`), `confirmModal.tsx` (`ConfirmModal`), `input.tsx` (`Input`), `Textarea.tsx` (`Textarea`), `select.tsx` (`Select`), `imageUploadField.tsx` (`ImageUploadField`)
-  - `components/layout/` — admin chrome: `adminLogin.tsx` (`AdminLogin`), `sidebar.tsx` (`Sidebar` — router `<Link>`-based nav, active section derived from URL), `adminProvider.tsx` (`AdminProvider` context + `useAdmin()` hook — owns ALL admin state: auth (`sessionStorage["cdaah_admin"]`), products/gallery/testimonials/quotes/settings (localStorage seeds) and their setters, `quoteCount`; pages consume data via `useAdmin()` instead of props), `adminLayout.tsx` (`AdminLayout` — the blueprint: confirmation dialog + `Sidebar` + top bar header + `<main><Outlet/></main>`; no props, derives `section` from the URL path)
+  - `components/layout/` — admin chrome: `adminLogin.tsx` (`AdminLogin` — POSTs `{ email, password }` to the backend `/admin/admin-login`; on success stores `cdaah_admin` + JWT `cdaah_token` in sessionStorage), `sidebar.tsx` (`Sidebar` — router `<Link>`-based nav, active section derived from URL), `adminProvider.tsx` (`AdminProvider` context + `useAdmin()` hook — owns ALL admin state: auth (`sessionStorage["cdaah_admin"]`), products/gallery/testimonials/quotes/settings (localStorage seeds) and their setters, `quoteCount`; pages consume data via `useAdmin()` instead of props), `adminLayout.tsx` (`AdminLayout` — the blueprint: confirmation dialog + `Sidebar` + top bar header + `<main><Outlet/></main>`; no props, derives `section` from the URL path)
   - `pages/` — one file per dashboard panel: `DashBoard.tsx` (`AdminOverview` — uses `useNavigate` instead of `setSection`), `adminProduct.tsx` (`AdminProducts` + `ProductModal` + `emptyProduct`), `quoteRequest.tsx` (`AdminQuotes`), `galleryModal.tsx` (`AdminGallery` + `GalleryModal`), `testimonials.tsx` (`AdminTestimonials` + `TestimonialModal`), `setting.tsx` (`AdminSettings`)
   - `AdminApp.tsx` — the auth gate route element: uses `useAdmin()`; renders `AdminLogin` when not authed, otherwise `<Outlet />` (the admin routes under `AdminLayout`)
 
@@ -82,7 +104,7 @@ src/app/client/
 
 ### Data / persistence
 - Products & sizes are **static now** (`data/products.ts`, `data/productSize.ts`) as a stand-in for a future database. When a DB/API arrives, swap these files for fetches returning the same `Product[]` shape so pages don't change.
-- Admin uses `localStorage` keys (`cdaah_*`) via `load()`/`save()` helpers in `AdminApp.tsx`.
+- Admin uses `localStorage` keys (`cdaah_*`) via `load()`/`save()` helpers in `adminProvider.tsx`. **Admin login now goes through the backend** (`POST /admin/admin-login`, Express + MongoDB): credentials are no longer hardcoded in the frontend; the returned JWT is stored as `cdaah_token` in sessionStorage for future authenticated API calls.
 
 ## Conventions (IMPORTANT)
 0. **Ask before making changes** — the user may be discussing/planning and NOT asking for implementation. When they ask a question or describe an idea, clarify first and get explicit confirmation (e.g. "want me to do it?") before editing files, moving/deleting code, or changing architecture. Never assume "I'd like to do X" means "go change the code".
@@ -106,6 +128,7 @@ src/app/client/
 
 ## Notes / current state
 - `MainPage.tsx` was **deleted** — everything was extracted into the structure above.
+- Admin login is wired to the backend (`POST /admin/admin-login`); the old hardcoded `ADMIN_USER`/`ADMIN_PASS` constants were removed. The backend must be running (port 3000) for login to work; DB/MongoDB collection `admins` holds the credentials.
 - TS strictly readable code remains possible; verify changes with `npx tsc --noEmit` (typescript installed locally) and `npm run build`.
 - Vite build output is large (~2.5 MB+ of images) — normal for this project.
 - Site backend contact form currently posts a message (WhatsApp-style); real DB integration is future work.
