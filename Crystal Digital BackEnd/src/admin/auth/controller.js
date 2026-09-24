@@ -77,16 +77,13 @@ export const adminRegister = async (req, res) => {
   }
 };
 
-
-
-
 export const adminLogin=async(req,res)=>{
     try {
         const {email,password}=req.body;
         if(!email && !password){
             return res.status(404).json({status:false,message:"emain and password are required"});
         }
-
+        
         const isUser=await AdminModel.findOne({email:email});
 
         if(!isUser){

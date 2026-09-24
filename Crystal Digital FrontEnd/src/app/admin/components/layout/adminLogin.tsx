@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { AlertCircle, Eye, Lock, User } from "lucide-react";
-import { ADMIN_PASS, ADMIN_USER } from "../../constants/admin";
+import { AlertCircle, Eye, Lock, Mail } from "lucide-react";
 
 export function AdminLogin({ onLogin }: { onLogin: () => void }) {
   const [username, setUsername] = useState("");
@@ -9,19 +8,29 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
-    setTimeout(() => {
-      if (username === ADMIN_USER && password === ADMIN_PASS) {
+    try {
+      const res = await fetch("http://localhost:3000/admin/admin-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: username, password }),
+      });
+      const data = await res.json();
+      if (data.status && res.ok) {
         sessionStorage.setItem("cdaah_admin", "1");
+        sessionStorage.setItem("cdaah_token", data.token);
         onLogin();
       } else {
-        setError("Invalid credentials. Please check your username and password.");
+        setError(data.message || "Invalid credentials. Please check your email and password.");
       }
+    } catch {
+      setError("Unable to reach the server. Is the backend running?");
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   }
 
   return (
@@ -59,14 +68,14 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-semibold text-gray-700">Username</label>
+              <label className="text-sm font-semibold text-gray-700">Email</label>
               <div className="relative">
-                <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
-                  type="text"
+                  type="email"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
+                  placeholder="Enter email"
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
                   required
                 />

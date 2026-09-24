@@ -8,8 +8,6 @@ import {
   Star,
 } from "lucide-react";
 
-export const ADMIN_USER = "admin";
-export const ADMIN_PASS = "crystal@2024";
 export const PRODUCT_CATS = ["Crystal", "Trophies", "Plaques", "Medals", "Collection", "Gifts"];
 export const GALLERY_CATS = ["Crystal Awards", "Trophies", "Plaques", "Medals", "Collection", "Printing"];
 export const STATUS_COLORS: Record<QuoteRequest["status"], string> = {
