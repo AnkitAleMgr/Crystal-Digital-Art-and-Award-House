@@ -26,18 +26,27 @@ Express + MongoDB API in `Crystal Digital BackEnd/` (run with `npm run dev` insi
 Crystal Digital BackEnd/
 ├── index.js                     ← app entry: CORS + JSON, mounts /admin router
 ├── src/
-│   ├── utils/db.js              ← DB_CONNECT (MONGO_DB_URI)
-│   ├── middleware/authMiddleware.js  ← JWT gate: verifies Bearer token, loads admin, sets req.admin
+│   ├── utils/
+│   │   ├── db.js                ← DB_CONNECT (MONGO_DB_URI)
+│   │   └── crud.js              ← generic CRUD factory (getAll/createOne/updateOne/deleteOne + _id→id mapping)
+│   ├── middleware/
+│   │   └── authMiddleware.js    ← JWT gate: verifies Bearer token, loads admin, sets req.admin
 │   └── admin/
 │       ├── route.js             ← /admin router (register, admin-login PUBLIC → middleware → protected routes)
-│       └── auth/
-│           ├── model.js         ← AdminModel (bcrypt pre-save hook, comparePassword, generateToken)
-│           └── controller.js    ← adminRegister, adminLogin, getMe
+│       ├── auth/
+│       │   ├── model.js         ← AdminModel (bcrypt pre-save hook, comparePassword, generateToken)
+│       │   └── controller.js    ← adminRegister, adminLogin, getMe
+│       ├── products/{model,controller,route}.js   ← CRUD for products (frontend AdminProduct shape)
+│       ├── quotes/{model,controller,route}.js     ← CRUD for quote requests (status enum new/reviewed/quoted/closed)
+│       ├── gallery/{model,controller,route}.js    ← CRUD for gallery items
+│       ├── testimonials/{model,controller,route}.js ← CRUD for testimonials
+│       └── settings/{model,controller,route}.js   ← single-doc settings (GET / + PUT /, no :id)
 ```
 
 - Auth flow: `POST /admin/register` → `POST /admin/admin-login` (returns JWT + `{ id, email, role }`) → future requests send `Authorization: Bearer <token>`.
-- `AdminRoute.use(authMiddleware)` is mounted **after** the public routes in `route.js` — everything registered below it (currently `GET /admin/me`) is protected and returns 401 without a valid token.
+- `AdminRoute.use(authMiddleware)` is mounted **after** the public routes in `route.js` — everything registered below it (`GET /me`, and all CRUD below) is protected and returns 401 without a valid token.
 - `GET /admin/me` returns the logged-in admin from `req.admin` (set by the middleware) — a health check for the token.
+- CRUD pattern: each resource has `model.js` (Mongoose schema mirroring the admin frontend types), `controller.js` (thin wrappers around the `utils/crud.js` factory), `route.js` (get/post/put/delete). All responses map Mongo `_id` → `id` so the frontend types match unchanged. Settings differs: single doc, `findOne`/`findOneAndUpdate` with `upsert`, no `:id`.
 - Env: `MONGO_DB_URI`, `ACCESS_TOKEN_SECRET`, `ACCESS_TOKEN_EXPIRE` in `.env`. Tokens are signed in `model.js` `generateToken()` with payload `{ id, email, role }`.
 
 ## Where things live & what they do
