@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { PRODUCTS} from "../../client/data/products";
-import { PRODUCT_SIZES } from "../../client/data/productSize";
+import { useSiteData } from "../components/layout/siteDataProvider";
+import { cdn } from "../utils/api";
 import { useInView } from "../../client/hooks/useInView";
 import { QuoteModal } from "../../client/components/pages/Product/productQuoteModal";
 import { useState } from "react";
@@ -12,7 +12,8 @@ export function ProductDetailPage() {
   const navigate = useNavigate();
   const { productId } = useParams<{ productId: string }>();
 
-  const product = PRODUCTS.find((item) => item.id === productId);
+  const { products, loading } = useSiteData();
+  const product = products.find((item) => item.id === productId);
 
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [selectedSize, setSelectedSize] = useState("");
@@ -20,6 +21,19 @@ export function ProductDetailPage() {
     useInView(0.1);
   const { ref: customRef, visible: customVisible } =
     useInView(0.1);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+        <p
+          className="text-gray-400 text-sm"
+          style={{ fontFamily: "Poppins, sans-serif" }}
+        >
+          Loading product…
+        </p>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -132,7 +146,7 @@ export function ProductDetailPage() {
                 }}
               >
                 <ImageWithFallback
-                  src={product.img}
+                  src={cdn(product.img)}
                   alt={product.name}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
@@ -193,7 +207,7 @@ export function ProductDetailPage() {
               </p>
 
               {/* Available Sizes */}
-              {(PRODUCT_SIZES[product.id] || []).length > 0 && (
+              {product.sizes.length > 0 && (
                 <div
                   className="mb-8 p-5 rounded-2xl"
                   style={{
@@ -211,7 +225,7 @@ export function ProductDetailPage() {
                     Select a size to pre-fill your quote request.
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {(PRODUCT_SIZES[product.id] || []).map((size) => (
+                    {product.sizes.map((size) => (
                       <button
                         key={size}
                         onClick={() =>

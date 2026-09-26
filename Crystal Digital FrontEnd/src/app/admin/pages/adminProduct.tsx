@@ -13,8 +13,16 @@ import { PRODUCT_CATS } from "../constants/admin";
 import { Pencil, Plus, Search, Tag, Trash2, X, AlertCircle, Loader2 } from "lucide-react";
 
 // ── Products Panel ────────────────────────────────────────────────────────────
+function slugify(name: string) {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function emptyProduct(): Omit<AdminProduct, "id"> {
-  return { name: "", desc: "", fullDesc: "", cat: "Crystal", features: [], specs: [], customizable: [], tags: [], sizes: [], imgUrl: "", imgPublicId: "" };
+  return { slug: "", name: "", desc: "", fullDesc: "", cat: "Crystal", features: [], specs: [], customizable: [], tags: [], sizes: [], imgUrl: "", imgPublicId: "" };
 }
 
 function ProductModal({
@@ -26,13 +34,14 @@ function ProductModal({
   onSave: (p: Omit<AdminProduct, "id">) => void;
   onClose: () => void;
 }) {
-  const [form, setForm] = useState<Omit<AdminProduct, "id">>(initial ? { ...initial, sizes: initial.sizes ?? [] } : emptyProduct());
+  const [form, setForm] = useState<Omit<AdminProduct, "id">>(initial ? { ...initial, slug: initial.slug ?? "", sizes: initial.sizes ?? [] } : emptyProduct());
   const [featInput, setFeatInput] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [customInput, setCustomInput] = useState("");
   const [sizeInput, setSizeInput] = useState("");
   const [specLabel, setSpecLabel] = useState("");
   const [specVal, setSpecVal] = useState("");
+  const [slugTouched, setSlugTouched] = useState(Boolean(initial?.slug));
 
   function addItem(field: "features" | "customizable", val: string, setter: (v: string) => void) {
     if (!val.trim()) return;
@@ -57,11 +66,25 @@ function ProductModal({
     <Modal title={initial ? "Edit Product" : "Add New Product"} onClose={onClose}>
       <div className="space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Product Name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Crystal Award" required />
+          <Input label="Product Name *" value={form.name} onChange={(e) => { const name = e.target.value; setForm((f) => ({ ...f, name, slug: slugTouched ? f.slug : slugify(name) })); }} placeholder="e.g. Crystal Award" required />
           <Select label="Category *" value={form.cat} onChange={(e) => setForm({ ...form, cat: e.target.value })}>
             {PRODUCT_CATS.map((c) => <option key={c}>{c}</option>)}
           </Select>
         </div>
+        <Input
+          label="URL Slug *"
+          value={form.slug}
+          onChange={(e) => {
+            setSlugTouched(true);
+            setForm({ ...form, slug: e.target.value });
+          }}
+          placeholder="crystal-award"
+          required
+        />
+        <p className="-mt-3 text-xs text-gray-400">
+          Public page: /products/{form.slug || "…"} — products without a slug are
+          not shown on the website.
+        </p>
         <Input label="Short Description *" value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder="Brief product description" required />
         <Textarea label="Full Description" value={form.fullDesc} onChange={(e) => setForm({ ...form, fullDesc: e.target.value })} rows={4} placeholder="Detailed product description..." />
         <ImageUploadField label="Product Image" folder="products" value={form.imgUrl} onChange={(url, publicId) => setForm({ ...form, imgUrl: url, imgPublicId: publicId ?? "" })} />

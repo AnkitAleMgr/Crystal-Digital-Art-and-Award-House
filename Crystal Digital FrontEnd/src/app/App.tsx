@@ -9,6 +9,7 @@ import { AdminTestimonials } from "./admin/pages/testimonials";
 import { AdminQuotes } from "./admin/pages/quoteRequest";
 import { AdminSettings } from "./admin/pages/setting";
 import Layout from "./client/Layout";
+import { SiteDataProvider } from "./client/components/layout/siteDataProvider";
 import { AboutPage } from "./client/pages/AboutPage";
 import { HomePage } from "./client/pages/HomePage";
 import { GalleryPage } from "./client/pages/GalleryPage";
@@ -18,8 +19,9 @@ import { ProductDetailPage } from "./client/pages/ProductDetailPage";
 export default function App() {
   return (
     <Routes>
-      {/* Public website */}
-      <Route element={<Layout/>}>
+      {/* Public website — SiteDataProvider sits above the Layout so all public
+          pages share one fetch instead of refetching on every navigation. */}
+      <Route element={<SiteDataProvider><Layout/></SiteDataProvider>}>
         <Route path="/" element={<HomePage/>} />
         <Route path="/about" element={<AboutPage/>} />
         <Route path="/gallery" element={<GalleryPage/>} />

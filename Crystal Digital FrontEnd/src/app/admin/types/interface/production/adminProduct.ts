@@ -1,5 +1,9 @@
 export interface AdminProduct {
   id: string;
+  // URL segment for the public product page (/products/:slug). The public API
+  // only serves products that have one, so a product without a slug is
+  // effectively invisible on the site.
+  slug: string;
   name: string;
   desc: string;
   fullDesc: string;

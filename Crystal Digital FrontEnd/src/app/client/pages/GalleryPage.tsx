@@ -1,16 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
-import img1 from "../../..//imports/image-1.png";
-import img2 from "../../..//imports/image-2.png";
-import img3 from "../../..//imports/image-3.png";
-import img4 from "../../..//imports/image-4.png";
-import img5 from "../../..//imports/image-5.png";
-import img6 from "../../..//imports/image-6.png";
-import img7 from "../../..//imports/image-7.png";
-import img8 from "../../..//imports/image-8.png";
-import img9 from "../../..//imports/image-9.png";
-import { PRODUCTS } from "../data/products";
+import { useSiteData } from "../components/layout/siteDataProvider";
+import { cdn } from "../utils/api";
+import { PublicGalleryItem } from "../types/Public";
 import { Section } from "../components/pages/home/homeSection";
 import { X } from "lucide-react";
 
@@ -23,78 +16,30 @@ const cats = [
   "Collection",
 ];
 
-const galleryItems = [
-  {
-    img: img2,
-    cat: "Crystal Awards",
-    label: "Token of Appreciation Award",
-    linkedProductId: "crystal-award",
-  },
-  {
-    img: img1,
-    cat: "Plaques",
-    label: "Wooden Plaque with Gold Frame",
-    linkedProductId: "wooden-plaque",
-  },
-  {
-    img: img4,
-    cat: "Trophies",
-    label: "Gold Sports Trophy",
-    linkedProductId: "gold-trophy",
-  },
-  {
-    img: img5,
-    cat: "Trophies",
-    label: "Cultural Temple Trophy",
-    linkedProductId: "cultural-trophy",
-  },
-  {
-    img: img3,
-    cat: "Medals",
-    label: "Sports Medal Set",
-    linkedProductId: "sports-medals",
-  },
-  {
-    img: img6,
-    cat: "Collection",
-    label: "Full Award Collection Display",
-    linkedProductId: "award-collection",
-  },
-  {
-    img: img7,
-    cat: "Collection",
-    label: "Awards & Trophies Showcase",
-  },
-  {
-    img: img8,
-    cat: "Collection",
-    label: "Trophy & Plaque Inventory",
-  },
-  {
-    img: img9,
-    cat: "Collection",
-    label: "Store Interior — Award Shelf Display",
-    // no linkedProductId: store/event photo — clicking will NOT show "Open Product Page"
-  },
-];
 
 export function GalleryPage() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState("All");
-  const [lightbox, setLightbox] = useState<
-    null | (typeof galleryItems)[0]
-  >(null);
+  const [lightbox, setLightbox] = useState<PublicGalleryItem | null>(null);
+  const { gallery: galleryItems, products, loading } = useSiteData();
   const filtered =
     filter === "All"
       ? galleryItems
       : galleryItems.filter((i) => i.cat === filter);
+
+  // The banner previously used a hardcoded local import; it now comes from the
+  // collection image in the database so it stays in sync with the admin.
+  const banner =
+    galleryItems.find((i) => i.label === "Full Award Collection Display")?.img ??
+    galleryItems[0]?.img ??
+    "";
 
   return (
     <div style={{ paddingTop: "80px" }}>
       {/* Banner */}
       <div className="relative h-52 overflow-hidden">
         <ImageWithFallback
-          src={img6}
+          src={cdn(banner)}
           alt="Gallery banner"
           className="w-full h-full object-cover"
         />
@@ -166,7 +111,7 @@ export function GalleryPage() {
               onClick={() => setLightbox(item)}
             >
               <ImageWithFallback
-                src={item.img}
+                src={cdn(item.img)}
                 alt={item.label}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
@@ -207,7 +152,7 @@ export function GalleryPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <ImageWithFallback
-              src={lightbox.img}
+              src={cdn(lightbox.img)}
               alt={lightbox.label}
               className="w-full object-cover max-h-[70vh]"
             />
@@ -224,7 +169,7 @@ export function GalleryPage() {
                 </div>
                 {lightbox.linkedProductId &&
                   (() => {
-                    const linked = PRODUCTS.find(
+                    const linked = products.find(
                       (p) => p.id === lightbox.linkedProductId,
                     );
                     return linked ? (

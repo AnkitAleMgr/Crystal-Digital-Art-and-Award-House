@@ -9,4 +9,5 @@ export interface Product {
   specs: { label: string; value: string }[];
   customizable: string[];
   tags: string[];
+  sizes: string[];
 }

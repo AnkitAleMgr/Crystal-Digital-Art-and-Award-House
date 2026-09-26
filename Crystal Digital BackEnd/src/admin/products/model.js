@@ -14,6 +14,7 @@ const ProductSchema = new mongoose.Schema(
     customizable: { type: [String], default: [] },
     tags: { type: [String], default: [] },
     sizes: { type: [String], default: [] },
+    slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
     imgUrl: { type: String, default: "" },
     imgPublicId: { type: String, default: "" },
   },

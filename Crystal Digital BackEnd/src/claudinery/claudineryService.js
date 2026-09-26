@@ -84,10 +84,13 @@ export const deleteImage = async (publicId) => {
   }
 };
 
+// Cloudinary delivery transforms belong in the URL *path*, not the query
+// string. "?f_auto&q_auto" is ignored and serves the original upload; the
+// working form is /image/upload/f_auto,q_auto/<version>/<public_id>.
 export const deliveryUrl = (url) => {
-  if (!url || !url.includes("/upload/")) {
+  if (!url || !url.includes("/upload/") || url.includes("/upload/f_auto,")) {
     return url;
   }
 
-  return `${url}?f_auto&q_auto`;
+  return url.replace("/upload/", "/upload/f_auto,q_auto/");
 };

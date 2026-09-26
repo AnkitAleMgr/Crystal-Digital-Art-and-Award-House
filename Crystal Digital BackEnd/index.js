@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { DB_CONNECT } from "./src/utils/db.js";
 import { AdminRoute } from "./src/admin/route.js";
+import { PublicRoute } from "./src/public/route.js";
 
 
 const app = express();
@@ -18,6 +19,7 @@ app.get("/testingapi", (req, res) => {
 });
 
 
+app.use("/api", PublicRoute);
 app.use("/admin",AdminRoute)
 
 const StartServer=async()=>{

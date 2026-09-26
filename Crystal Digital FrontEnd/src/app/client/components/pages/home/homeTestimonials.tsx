@@ -1,38 +1,35 @@
 import { Star } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useSiteData } from "../../layout/siteDataProvider";
 
 // ── TESTIMONIALS ──────────────────────────────────────────────────────────────
-export const testimonials = [
-  {
-    name: "Ramesh Sharma",
-    company: "Pokhara Academy",
-    text: "Crystal Digital delivered outstanding trophies for our annual sports day. The quality was beyond expectations and delivery was on time!",
-    rating: 5,
-  },
-  {
-    name: "Sunita Gurung",
-    company: "Annapurna Hotels",
-    text: "We ordered custom crystal awards for our employee recognition ceremony. Beautifully crafted and professionally packaged. Highly recommend!",
-    rating: 5,
-  },
-  {
-    name: "Bikash Thapa",
-    company: "Gandaki Province Office",
-    text: "Excellent service for our government felicitation event. The wooden plaques and laser engraving were top-notch. Will definitely order again.",
-    rating: 5,
-  },
-];
 
 export function Testimonials() {
+  const { testimonials, loading } = useSiteData();
   const [tidx, setTidx] = useState(0);
+
   useEffect(() => {
+    if (testimonials.length === 0) return;
     const id = setInterval(
       () => setTidx((i) => (i + 1) % testimonials.length),
       5000,
     );
     return () => clearInterval(id);
-  }, []);
-  const t = testimonials[tidx];
+  }, [testimonials.length]);
+
+  // The list can shrink (or arrive late) after the index was set, so clamp it.
+  const active = tidx < testimonials.length ? tidx : 0;
+  const t = testimonials[active];
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto text-center py-8">
+        <p className="text-sm text-gray-400">Loading testimonials…</p>
+      </div>
+    );
+  }
+
+  if (!t) return null;
   return (
     <div className="max-w-2xl mx-auto text-center">
       <div

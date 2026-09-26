@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { PRODUCTS } from "../../../data/products";
+import { useSiteData } from "../../layout/siteDataProvider";
+import { cdn } from "../../../utils/api";
 import { useInView } from "../../../hooks/useInView";
 import { useState } from "react";
 import { ImageWithFallback } from "../../../../components/figma/ImageWithFallback";
@@ -20,6 +21,7 @@ const PAGE_SIZE = 6;
 export function FeaturedProducts() {
   const navigate = useNavigate();
   const { ref, visible } = useInView();
+  const { products: PRODUCTS, loading } = useSiteData();
   const [activeFilter, setActiveFilter] = useState("All");
   const [page, setPage] = useState(1);
 
@@ -75,6 +77,12 @@ export function FeaturedProducts() {
       </div>
 
       {/* Product grid — 3 columns × 2 rows = 6 per page */}
+      {loading ? (
+        <p className="text-center text-sm text-gray-400 py-16">
+          Loading products…
+        </p>
+      ) : (
+        <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {pageProducts.map((p, i) => (
           <div
@@ -95,7 +103,7 @@ export function FeaturedProducts() {
               style={{ background: "#F8FAFC" }}
             >
               <ImageWithFallback
-                src={p.img}
+                src={cdn(p.img)}
                 alt={p.name}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
@@ -150,6 +158,8 @@ export function FeaturedProducts() {
         <div className="text-center py-16 text-gray-400 text-sm">
           No products in this category yet.
         </div>
+      )}
+        </>
       )}
 
       {/* Pagination — only appears when there is more than one page */}
