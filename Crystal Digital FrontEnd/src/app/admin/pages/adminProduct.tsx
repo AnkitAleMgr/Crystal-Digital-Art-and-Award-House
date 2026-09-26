@@ -10,11 +10,11 @@ import { load } from "../utils/storage";
 import { sendNotificationEmail } from "../utils/sendNotification";
 import { useAdmin } from "../components/layout/adminProvider";
 import { PRODUCT_CATS } from "../constants/admin";
-import { Pencil, Plus, Search, Tag, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Search, Tag, Trash2, X, AlertCircle, Loader2 } from "lucide-react";
 
 // ── Products Panel ────────────────────────────────────────────────────────────
 function emptyProduct(): Omit<AdminProduct, "id"> {
-  return { name: "", desc: "", fullDesc: "", cat: "Crystal", features: [], specs: [], customizable: [], tags: [], sizes: [], imgUrl: "" };
+  return { name: "", desc: "", fullDesc: "", cat: "Crystal", features: [], specs: [], customizable: [], tags: [], sizes: [], imgUrl: "", imgPublicId: "" };
 }
 
 function ProductModal({
@@ -64,7 +64,7 @@ function ProductModal({
         </div>
         <Input label="Short Description *" value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder="Brief product description" required />
         <Textarea label="Full Description" value={form.fullDesc} onChange={(e) => setForm({ ...form, fullDesc: e.target.value })} rows={4} placeholder="Detailed product description..." />
-        <ImageUploadField label="Product Image" value={form.imgUrl} onChange={(url) => setForm({ ...form, imgUrl: url })} />
+        <ImageUploadField label="Product Image" folder="products" value={form.imgUrl} onChange={(url, publicId) => setForm({ ...form, imgUrl: url, imgPublicId: publicId ?? "" })} />
 
         {/* Features */}
         <div>
@@ -207,48 +207,57 @@ function ProductModal({
 }
 
 export function AdminProducts() {
-  const { products, setProducts } = useAdmin();
+  const { products, createProduct, updateProduct, deleteProduct, error, clearError, loading } = useAdmin();
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<AdminProduct | null>(null);
   const [deleting, setDeleting] = useState<AdminProduct | null>(null);
   const [catFilter, setCatFilter] = useState("All");
+  const [saving, setSaving] = useState(false);
 
   const filtered = products.filter((p) =>
     (catFilter === "All" || p.cat === catFilter) &&
     (p.name.toLowerCase().includes(search.toLowerCase()) || p.cat.toLowerCase().includes(search.toLowerCase()))
   );
 
-  function handleSave(data: Omit<AdminProduct, "id">) {
-    if (editing) {
-      const updated = products.map((p) => p.id === editing.id ? { ...data, id: editing.id } : p);
-      setProducts(updated);
-    } else {
-      setProducts([...products, { ...data, id: `prod-${Date.now()}` }]);
-      const subscribers: string[] = load("cdaah_subscribers", []);
-      subscribers.forEach((email) => {
-        sendNotificationEmail(
-          email,
-          `New Product: ${data.name} — Crystal Digital Art & Award House`,
-          {
-            Notification: "A new product has been added to Crystal Digital Art & Award House.",
-            Product_Name: data.name,
-            Category: data.cat,
-            Description: data.desc || "—",
-            Tags: data.tags?.join(", ") || "—",
-            Visit: "https://crystaldigital.com.np",
-          }
-        );
-      });
+  async function handleSave(data: Omit<AdminProduct, "id">) {
+    setSaving(true);
+    try {
+      if (editing) {
+        await updateProduct(editing.id, data);
+      } else {
+        await createProduct(data);
+        const subscribers: string[] = load("cdaah_subscribers", []);
+        subscribers.forEach((email) => {
+          sendNotificationEmail(
+            email,
+            `New Product: ${data.name} — Crystal Digital Art & Award House`,
+            {
+              Notification: "A new product has been added to Crystal Digital Art & Award House.",
+              Product_Name: data.name,
+              Category: data.cat,
+              Description: data.desc || "—",
+              Tags: data.tags?.join(", ") || "—",
+              Visit: "https://crystaldigital.com.np",
+            }
+          );
+        });
+      }
+      setShowModal(false);
+      setEditing(null);
+    } catch {
+    } finally {
+      setSaving(false);
     }
-    setShowModal(false);
-    setEditing(null);
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!deleting) return;
-    setProducts(products.filter((p) => p.id !== deleting.id));
-    setDeleting(null);
+    try {
+      await deleteProduct(deleting.id);
+      setDeleting(null);
+    } catch {
+    }
   }
 
   return (
@@ -266,6 +275,20 @@ export function AdminProducts() {
           <Plus size={18} /> Add Product
         </button>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-200">
+          <AlertCircle size={18} className="text-red-600 flex-shrink-0" />
+          <p className="text-red-700 text-sm font-medium flex-1">{error}</p>
+          <button onClick={clearError} className="text-red-500 hover:text-red-700 text-xs font-semibold">Dismiss</button>
+        </div>
+      )}
+
+      {loading && (
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Loader2 size={16} className="animate-spin" /> Loading from database…
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">

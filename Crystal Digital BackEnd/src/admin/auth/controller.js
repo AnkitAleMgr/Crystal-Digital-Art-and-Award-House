@@ -1,10 +1,41 @@
+import crypto from "crypto";
 import { AdminModel } from "./model.js";
+
+const safeUser = (admin) => ({
+  id: admin._id,
+  name: admin.name,
+  email: admin.email,
+  role: admin.role,
+});
 
 export const adminRegister = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, secret } = req.body;
 
-    // Check required fields
+    const registerSecret = process.env.ADMIN_REGISTER_SECRET;
+
+    if (!registerSecret) {
+      console.error("ADMIN_REGISTER_SECRET is not set. Registration is disabled.");
+      return res.status(503).json({
+        status: false,
+        message: "Registration is disabled on this server",
+      });
+    }
+
+    const provided = Buffer.from(String(secret || ""));
+    const expected = Buffer.from(registerSecret);
+
+    const secretOk =
+      provided.length === expected.length &&
+      crypto.timingSafeEqual(provided, expected);
+
+    if (!secretOk) {
+      return res.status(401).json({
+        status: false,
+        message: "Invalid registration secret",
+      });
+    }
+
     if (!name || !email || !password) {
       return res.status(400).json({
         status: false,
@@ -12,7 +43,6 @@ export const adminRegister = async (req, res) => {
       });
     }
 
-    // Check if email already exists
     const isEmail = await AdminModel.findOne({
       email: email.toLowerCase(),
     });
@@ -24,7 +54,6 @@ export const adminRegister = async (req, res) => {
       });
     }
 
-    // Create admin
     const newUser = await AdminModel.create({
       name,
       email,
@@ -34,17 +63,9 @@ export const adminRegister = async (req, res) => {
     return res.status(201).json({
       status: true,
       message: "Admin registered successfully",
-      data: {
-        id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-      },
+      data: safeUser(newUser),
     });
-
   } catch (error) {
-
-    // Mongoose validation error
     if (error.name === "ValidationError") {
       const errors = {};
 
@@ -59,7 +80,6 @@ export const adminRegister = async (req, res) => {
       });
     }
 
-    // Duplicate MongoDB key error
     if (error.code === 11000) {
       return res.status(409).json({
         status: false,
@@ -67,7 +87,6 @@ export const adminRegister = async (req, res) => {
       });
     }
 
-    // Unexpected error
     console.error("Admin registration error:", error);
 
     return res.status(500).json({
@@ -77,34 +96,52 @@ export const adminRegister = async (req, res) => {
   }
 };
 
-export const adminLogin=async(req,res)=>{
-    try {
-        const {email,password}=req.body;
-        if(!email && !password){
-            return res.status(404).json({status:false,message:"emain and password are required"});
-        }
-        
-        const isUser=await AdminModel.findOne({email:email});
+export const adminLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-        if(!isUser){
-            return res.status(400).json({status:false,message:"Invalid credentials"});
-        }
-
-
-        const isPasswordMathed=await isUser.comparePassword(password);
-
-        if(!isPasswordMathed){
-            return res.status(400).json({status:false,message:"Invalid credentials"});
-        }
-
-        const token=await isUser.generateToken();
-
-        res.status(201).json({status:true,token:token, user:isUser});
-
-    } catch (error) {
-        
+    if (!email || !password) {
+      return res.status(400).json({
+        status: false,
+        message: "Email and password are required",
+      });
     }
-}
+
+    const isUser = await AdminModel.findOne({ email }).select("+password");
+
+    if (!isUser) {
+      return res.status(400).json({
+        status: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    const isPasswordMatched = await isUser.comparePassword(password);
+
+    if (!isPasswordMatched) {
+      return res.status(400).json({
+        status: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    const token = isUser.generateToken();
+
+    return res.status(200).json({
+      status: true,
+      message: "Login successful",
+      token,
+      user: safeUser(isUser),
+    });
+  } catch (error) {
+    console.error("Admin login error:", error);
+
+    return res.status(500).json({
+      status: false,
+      message: "Internal server error",
+    });
+  }
+};
 
 export const getMe = (req, res) => {
   res.status(200).json({ status: true, data: req.admin });

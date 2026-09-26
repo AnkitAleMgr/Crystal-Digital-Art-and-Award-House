@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Testimonial } from "../types/interface/testimonials/testimonials";
-import { Pencil, Plus, Star, Trash2 } from "lucide-react";
+import { Pencil, Plus, Star, Trash2, AlertCircle } from "lucide-react";
 import { ConfirmModal } from "../components/ui/confirmModal";
 import { Input } from "../components/ui/input";
 import { Modal } from "../components/ui/modal";
@@ -55,19 +55,31 @@ function TestimonialModal({
 }
 
 export function AdminTestimonials() {
-  const { testimonials, setTestimonials } = useAdmin();
+  const { testimonials, createTestimonial, updateTestimonial, deleteTestimonial, error, clearError } = useAdmin();
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Testimonial | null>(null);
   const [deleting, setDeleting] = useState<Testimonial | null>(null);
 
-  function handleSave(data: Omit<Testimonial, "id">) {
-    if (editing) {
-      setTestimonials(testimonials.map((t) => t.id === editing.id ? { ...data, id: editing.id } : t));
-    } else {
-      setTestimonials([...testimonials, { ...data, id: `test-${Date.now()}` }]);
+  async function handleSave(data: Omit<Testimonial, "id">) {
+    try {
+      if (editing) {
+        await updateTestimonial(editing.id, data);
+      } else {
+        await createTestimonial(data);
+      }
+      setShowModal(false);
+      setEditing(null);
+    } catch {
     }
-    setShowModal(false);
-    setEditing(null);
+  }
+
+  async function handleDelete() {
+    if (!deleting) return;
+    try {
+      await deleteTestimonial(deleting.id);
+      setDeleting(null);
+    } catch {
+    }
   }
 
   return (
@@ -85,6 +97,14 @@ export function AdminTestimonials() {
           <Plus size={18} /> Add Testimonial
         </button>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-200">
+          <AlertCircle size={18} className="text-red-600 flex-shrink-0" />
+          <p className="text-red-700 text-sm font-medium flex-1">{error}</p>
+          <button onClick={clearError} className="text-red-500 hover:text-red-700 text-xs font-semibold">Dismiss</button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {testimonials.map((t) => (
@@ -126,7 +146,7 @@ export function AdminTestimonials() {
         <TestimonialModal initial={editing ?? undefined} onSave={handleSave} onClose={() => { setShowModal(false); setEditing(null); }} />
       )}
       {deleting && (
-        <ConfirmModal message={`Delete testimonial from "${deleting.name}"?`} onConfirm={() => { setTestimonials(testimonials.filter((t) => t.id !== deleting.id)); setDeleting(null); }} onCancel={() => setDeleting(null)} />
+        <ConfirmModal message={`Delete testimonial from "${deleting.name}"?`} onConfirm={handleDelete} onCancel={() => setDeleting(null)} />
       )}
     </div>
   );

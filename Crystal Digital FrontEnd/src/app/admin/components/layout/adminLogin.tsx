@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { AlertCircle, Eye, Lock, Mail } from "lucide-react";
+import { API_BASE } from "../../utils/api";
 
 export function AdminLogin({ onLogin }: { onLogin: () => void }) {
   const [username, setUsername] = useState("");
@@ -13,7 +14,7 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:3000/admin/admin-login", {
+      const res = await fetch(`${API_BASE}/admin/admin-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: username, password }),

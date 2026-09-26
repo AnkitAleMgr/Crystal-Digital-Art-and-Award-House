@@ -1,19 +1,38 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/Textarea";
-import { AlertCircle, CheckCircle, Save } from "lucide-react";
+import { AlertCircle, CheckCircle, Loader2, Save } from "lucide-react";
 import { useAdmin } from "../components/layout/adminProvider";
 
 // ── Settings Panel ────────────────────────────────────────────────────────────
 export function AdminSettings() {
-  const { settings, setSettings } = useAdmin();
+  const { settings, saveSettings, error, clearError, loading } = useAdmin();
   const [form, setForm] = useState({ ...settings });
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function handleSave() {
-    setSettings(form);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  useEffect(() => {
+    setForm({ ...settings });
+  }, [settings]);
+
+  useEffect(() => {
+    return () => {
+      if (savedTimer.current) clearTimeout(savedTimer.current);
+    };
+  }, []);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await saveSettings(form);
+      setSaved(true);
+      if (savedTimer.current) clearTimeout(savedTimer.current);
+      savedTimer.current = setTimeout(() => setSaved(false), 2500);
+    } catch {
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -51,18 +70,27 @@ export function AdminSettings() {
         <Input label="Google Maps Link" value={form.mapLink} onChange={(e) => setForm({ ...form, mapLink: e.target.value })} placeholder="https://maps.google.com/..." />
       </div>
 
+      {error && (
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-200">
+          <AlertCircle size={18} className="text-red-600 flex-shrink-0" />
+          <p className="text-red-700 text-sm font-medium">{error}</p>
+        </div>
+      )}
+
       <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5 flex items-start gap-3">
         <AlertCircle size={18} className="text-amber-600 mt-0.5 flex-shrink-0" />
-        <p className="text-amber-700 text-sm">Settings are saved locally. In a production environment, these would sync to your backend database.</p>
+        <p className="text-amber-700 text-sm">Settings are stored in your MongoDB database via <code className="font-mono text-xs">PUT /admin/settings</code>.</p>
       </div>
 
       <div className="flex justify-end">
         <button
           onClick={handleSave}
-          className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:shadow-lg active:scale-95"
+          disabled={saving || loading}
+          className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:shadow-lg active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
           style={{ background: "linear-gradient(135deg, #2563EB, #1D4ED8)" }}
         >
-          <Save size={16} /> Save Settings
+          {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+          {saving ? "Saving…" : "Save Settings"}
         </button>
       </div>
     </div>

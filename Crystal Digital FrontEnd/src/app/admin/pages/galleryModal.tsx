@@ -8,7 +8,7 @@ import { Modal } from "../components/ui/modal";
 import { Select } from "../components/ui/select";
 import { GALLERY_CATS } from "../constants/admin";
 import { useAdmin } from "../components/layout/adminProvider";
-import { Image, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Image, Pencil, Plus, Search, Trash2, AlertCircle } from "lucide-react";
 
 function GalleryModal({
   initial,
@@ -23,8 +23,8 @@ function GalleryModal({
 }) {
   const [form, setForm] = useState<Omit<GalleryItem, "id">>(
     initial
-      ? { label: initial.label, cat: initial.cat, imgUrl: initial.imgUrl, linkedProductId: initial.linkedProductId }
-      : { label: "", cat: "Crystal Awards", imgUrl: "", linkedProductId: undefined }
+      ? { label: initial.label, cat: initial.cat, imgUrl: initial.imgUrl, imgPublicId: initial.imgPublicId, linkedProductId: initial.linkedProductId }
+      : { label: "", cat: "Crystal Awards", imgUrl: "", imgPublicId: "", linkedProductId: undefined }
   );
 
   return (
@@ -34,7 +34,7 @@ function GalleryModal({
         <Select label="Category *" value={form.cat} onChange={(e) => setForm({ ...form, cat: e.target.value })}>
           {GALLERY_CATS.map((c) => <option key={c}>{c}</option>)}
         </Select>
-        <ImageUploadField label="Gallery Image" value={form.imgUrl} onChange={(url) => setForm({ ...form, imgUrl: url })} />
+        <ImageUploadField label="Gallery Image" folder="gallery" value={form.imgUrl} onChange={(url, publicId) => setForm({ ...form, imgUrl: url, imgPublicId: publicId ?? "" })} />
 
         {/* Product link */}
         <div className="flex flex-col gap-1.5">
@@ -84,7 +84,7 @@ function GalleryModal({
 }
 
 export function AdminGallery() {
-  const { gallery, setGallery, products } = useAdmin();
+  const { gallery, createGalleryItem, updateGalleryItem, deleteGalleryItem, products, error, clearError } = useAdmin();
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<GalleryItem | null>(null);
   const [deleting, setDeleting] = useState<GalleryItem | null>(null);
@@ -96,14 +96,26 @@ export function AdminGallery() {
     g.label.toLowerCase().includes(search.toLowerCase())
   );
 
-  function handleSave(data: Omit<GalleryItem, "id">) {
-    if (editing) {
-      setGallery(gallery.map((g) => g.id === editing.id ? { ...data, id: editing.id } : g));
-    } else {
-      setGallery([...gallery, { ...data, id: `gal-${Date.now()}` }]);
+  async function handleSave(data: Omit<GalleryItem, "id">) {
+    try {
+      if (editing) {
+        await updateGalleryItem(editing.id, data);
+      } else {
+        await createGalleryItem(data);
+      }
+      setShowModal(false);
+      setEditing(null);
+    } catch {
     }
-    setShowModal(false);
-    setEditing(null);
+  }
+
+  async function handleDelete() {
+    if (!deleting) return;
+    try {
+      await deleteGalleryItem(deleting.id);
+      setDeleting(null);
+    } catch {
+    }
   }
 
   return (
@@ -121,6 +133,14 @@ export function AdminGallery() {
           <Plus size={18} /> Add Item
         </button>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-200">
+          <AlertCircle size={18} className="text-red-600 flex-shrink-0" />
+          <p className="text-red-700 text-sm font-medium flex-1">{error}</p>
+          <button onClick={clearError} className="text-red-500 hover:text-red-700 text-xs font-semibold">Dismiss</button>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -190,7 +210,7 @@ export function AdminGallery() {
         <GalleryModal initial={editing ?? undefined} onSave={handleSave} onClose={() => { setShowModal(false); setEditing(null); }} products={products} />
       )}
       {deleting && (
-        <ConfirmModal message={`Delete "${deleting.label}" from gallery?`} onConfirm={() => { setGallery(gallery.filter((g) => g.id !== deleting.id)); setDeleting(null); }} onCancel={() => setDeleting(null)} />
+        <ConfirmModal message={`Delete "${deleting.label}" from gallery?`} onConfirm={handleDelete} onCancel={() => setDeleting(null)} />
       )}
     </div>
   );

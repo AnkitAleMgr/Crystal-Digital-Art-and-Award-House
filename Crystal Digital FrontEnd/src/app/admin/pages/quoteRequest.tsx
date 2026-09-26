@@ -5,49 +5,58 @@ import { Modal } from "../components/ui/modal";
 import { sendNotificationEmail } from "../utils/sendNotification";
 import { STATUS_COLORS } from "../constants/admin";
 import { useAdmin } from "../components/layout/adminProvider";
-import { Eye, Search, User } from "lucide-react";
+import { Eye, Search, User, AlertCircle } from "lucide-react";
 
 // ── Quote Requests Panel ──────────────────────────────────────────────────────
 export function AdminQuotes() {
-  const { quotes, setQuotes } = useAdmin();
+  const { quotes, updateQuoteStatus, quoteCount, error, clearError } = useAdmin();
   const [viewing, setViewing] = useState<QuoteRequest | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | QuoteRequest["status"]>("all");
   const [search, setSearch] = useState("");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const filtered = quotes.filter((q) =>
     (statusFilter === "all" || q.status === statusFilter) &&
     (q.name.toLowerCase().includes(search.toLowerCase()) || q.product.toLowerCase().includes(search.toLowerCase()) || q.email.toLowerCase().includes(search.toLowerCase()))
   );
 
-  function updateStatus(id: string, status: QuoteRequest["status"]) {
+  async function updateStatus(id: string, status: QuoteRequest["status"]) {
     const quote = quotes.find((q) => q.id === id);
-    setQuotes(quotes.map((q) => q.id === id ? { ...q, status } : q));
-    if (viewing?.id === id) setViewing((v) => v ? { ...v, status } : null);
-    if (quote && quote.email) {
-      const statusLabels: Record<QuoteRequest["status"], string> = {
-        new: "Received",
-        reviewed: "Under Review",
-        quoted: "Price Quoted",
-        closed: "Closed",
-      };
-      const statusMessages: Record<QuoteRequest["status"], string> = {
-        new: "Your quote request has been received and is in our queue.",
-        reviewed: "Our team is currently reviewing your quote request.",
-        quoted: "We have prepared a price quote for your request. Our team will contact you shortly.",
-        closed: "Your quote request has been closed. Thank you for your interest.",
-      };
-      sendNotificationEmail(
-        quote.email,
-        `Your Quote Request Update — Crystal Digital Art & Award House`,
-        {
-          Dear_Customer: quote.name,
-          Product: quote.product,
-          Selected_Size: quote.size || "Not specified",
-          Status: statusLabels[status],
-          Message: statusMessages[status],
-          Contact_Us: "Call +977-61-XXXXXX or visit crystaldigital.com.np",
-        }
-      );
+    if (!quote || updatingId) return;
+
+    setUpdatingId(id);
+    try {
+      await updateQuoteStatus(id, status);
+      if (viewing?.id === id) setViewing((v) => v ? { ...v, status } : null);
+      if (quote.email) {
+        const statusLabels: Record<QuoteRequest["status"], string> = {
+          new: "Received",
+          reviewed: "Under Review",
+          quoted: "Price Quoted",
+          closed: "Closed",
+        };
+        const statusMessages: Record<QuoteRequest["status"], string> = {
+          new: "Your quote request has been received and is in our queue.",
+          reviewed: "Our team is currently reviewing your quote request.",
+          quoted: "We have prepared a price quote for your request. Our team will contact you shortly.",
+          closed: "Your quote request has been closed. Thank you for your interest.",
+        };
+        sendNotificationEmail(
+          quote.email,
+          `Your Quote Request Update — Crystal Digital Art & Award House`,
+          {
+            Dear_Customer: quote.name,
+            Product: quote.product,
+            Selected_Size: quote.size || "Not specified",
+            Status: statusLabels[status],
+            Message: statusMessages[status],
+            Contact_Us: "Call +977-61-XXXXXX or visit crystaldigital.com.np",
+          }
+        );
+      }
+    } catch {
+    } finally {
+      setUpdatingId(null);
     }
   }
 
@@ -55,8 +64,16 @@ export function AdminQuotes() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-800" style={{ fontFamily: "Poppins, sans-serif" }}>Quote Requests</h1>
-        <p className="text-gray-500 text-sm mt-0.5">{quotes.filter((q) => q.status === "new").length} new, {quotes.length} total</p>
+        <p className="text-gray-500 text-sm mt-0.5">{quoteCount} new, {quotes.length} total</p>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-200">
+          <AlertCircle size={18} className="text-red-600 flex-shrink-0" />
+          <p className="text-red-700 text-sm font-medium flex-1">{error}</p>
+          <button onClick={clearError} className="text-red-500 hover:text-red-700 text-xs font-semibold">Dismiss</button>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -159,7 +176,8 @@ export function AdminQuotes() {
                   <button
                     key={s}
                     onClick={() => updateStatus(viewing.id, s)}
-                    className="px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all border"
+                    disabled={updatingId !== null}
+                    className="px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all border disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
                       background: viewing.status === s ? STATUS_COLORS[s] : "white",
                       color: viewing.status === s ? "white" : STATUS_COLORS[s],

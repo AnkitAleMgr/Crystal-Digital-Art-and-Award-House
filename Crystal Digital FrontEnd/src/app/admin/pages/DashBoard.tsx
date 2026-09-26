@@ -6,14 +6,13 @@ import { useAdmin } from "../components/layout/adminProvider";
 
 // ── Overview ──────────────────────────────────────────────────────────────────
 export function AdminOverview() {
-  const { products, gallery, testimonials, quotes } = useAdmin();
+  const { products, gallery, testimonials, quotes, quoteCount } = useAdmin();
   const navigate = useNavigate();
-  const newQuotes = quotes.filter((q) => q.status === "new").length;
   const stats = [
     { label: "Total Products", value: products.length, icon: <Package size={22} />, color: "#2563EB", bg: "#EFF6FF", section: "products" as AdminSection },
     { label: "Gallery Items", value: gallery.length, icon: <Image size={22} />, color: "#16A34A", bg: "#F0FDF4", section: "gallery" as AdminSection },
     { label: "Testimonials", value: testimonials.length, icon: <Star size={22} />, color: "#D4AF37", bg: "#FEFCE8", section: "testimonials" as AdminSection },
-    { label: "New Inquiries", value: newQuotes, icon: <MessageSquare size={22} />, color: "#DC2626", bg: "#FEF2F2", section: "quotes" as AdminSection },
+    { label: "New Inquiries", value: quoteCount, icon: <MessageSquare size={22} />, color: "#DC2626", bg: "#FEF2F2", section: "quotes" as AdminSection },
   ];
 
   const recentQuotes = quotes.slice(0, 4);

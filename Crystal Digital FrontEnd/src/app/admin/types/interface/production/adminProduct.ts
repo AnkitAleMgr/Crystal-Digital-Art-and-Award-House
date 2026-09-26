@@ -10,4 +10,5 @@ export interface AdminProduct {
   tags: string[];
   sizes: string[];
   imgUrl: string;
+  imgPublicId?: string;
 }

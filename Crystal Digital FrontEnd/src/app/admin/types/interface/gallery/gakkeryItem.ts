@@ -3,5 +3,6 @@ export interface GalleryItem {
   label: string;
   cat: string;
   imgUrl: string;
+  imgPublicId?: string;
   linkedProductId?: string;
 }

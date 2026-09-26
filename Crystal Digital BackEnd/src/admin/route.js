@@ -5,6 +5,7 @@ import { QuoteRoute } from "./quotes/route.js";
 import { GalleryRoute } from "./gallery/route.js";
 import { TestimonialRoute } from "./testimonials/route.js";
 import { SettingRoute } from "./settings/route.js";
+import { UploadRoute } from "./upload/route.js";
 import express from "express";
 
 
@@ -18,6 +19,7 @@ AdminRoute.post("/admin-login", adminLogin);
 //Protected routes
 AdminRoute.use(authMiddleware);
 AdminRoute.get("/me", getMe);
+AdminRoute.use("/upload", UploadRoute);
 AdminRoute.use("/products", ProductRoute);
 AdminRoute.use("/quotes", QuoteRoute);
 AdminRoute.use("/gallery", GalleryRoute);
