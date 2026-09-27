@@ -1,12 +1,20 @@
+import type { QuoteSubmission } from "../types/Public";
+
 export const PUBLIC_API_BASE =
   import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
 
 export class PublicApiError extends Error {
   status: number;
+  fields: Record<string, string>;
 
-  constructor(message: string, status: number) {
+  constructor(
+    message: string,
+    status: number,
+    fields: Record<string, string> = {}
+  ) {
     super(message);
     this.status = status;
+    this.fields = fields;
   }
 }
 
@@ -27,11 +35,11 @@ export function cdn(url: string): string {
   return url.replace("/upload/", "/upload/f_auto,q_auto/");
 }
 
-async function get<T>(path: string): Promise<T> {
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
 
   try {
-    res = await fetch(`${PUBLIC_API_BASE}/api${path}`);
+    res = await fetch(`${PUBLIC_API_BASE}/api${path}`, init);
   } catch {
     throw new PublicApiError(
       `Cannot reach the server at ${PUBLIC_API_BASE}.`,
@@ -42,18 +50,33 @@ async function get<T>(path: string): Promise<T> {
   const payload = await res.json().catch(() => null);
 
   if (!res.ok || !payload?.status) {
+    const fields: Record<string, string> = payload?.errors ?? {};
+    const detail = Object.values(fields).join(" ");
+
     throw new PublicApiError(
-      payload?.message || `Request failed (${res.status})`,
-      res.status
+      detail || payload?.message || `Request failed (${res.status})`,
+      res.status,
+      fields
     );
   }
 
   return payload.data as T;
 }
 
+const get = <T>(path: string) => request<T>(path);
+
+const post = <T>(path: string, body: unknown) =>
+  request<T>(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
 export const publicApi = {
   products: <T>() => get<T>("/products"),
   gallery: <T>() => get<T>("/gallery"),
   testimonials: <T>() => get<T>("/testimonials"),
   settings: <T>() => get<T>("/settings"),
+  createQuote: (body: QuoteSubmission) =>
+    post<{ id: string | null; createdAt: string }>("/quotes", body),
 };

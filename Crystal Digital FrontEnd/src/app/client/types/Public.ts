@@ -13,3 +13,17 @@ export interface PublicTestimonial {
   text: string;
   rating: number;
 }
+
+export interface QuoteSubmission {
+  name: string;
+  email: string;
+  phone?: string;
+  product?: string;
+  size?: string;
+  service?: string;
+  quantity?: string;
+  engrave?: string;
+  attachment?: string;
+  message?: string;
+  website?: string;
+}

@@ -16,7 +16,20 @@ Crystal Digital copy/                 ← repo root
 cd "Crystal Digital FrontEnd"
 npm run dev        # start dev server
 npm run build      # production build (verifies everything compiles/bundles)
+npx tsc --noEmit   # real type check — stricter than the build, run both
 ```
+
+### Driving the real UI in a browser (Playwright)
+`npx playwright install chromium` **fails on this machine** (download error, code=1). Use the
+already-installed Google Chrome instead, which needs no download:
+```js
+import { chromium } from "playwright-core";
+const browser = await chromium.launch({ channel: "chrome" });
+```
+This is the only way to verify form/UI behaviour end to end — `npm run e2e` covers the API
+contract only. Useful when touching `ContactPage`, `productQuoteModal`, or the admin pages:
+drive the form, assert on `page.on("response")` for the POST, and remember to delete the
+`@example.com` rows the submissions create.
 
 ## Backend
 
@@ -35,10 +48,11 @@ Crystal Digital BackEnd/
 │   │   └── crud.js              ← generic CRUD factory (getAll/createOne/updateOne/deleteOne); also exports the shared `mapDoc` (strips `_id`/`__v`, returns `id`) and `fail` (Mongoose `ValidationError` → 400 + `errors{}` field map, `CastError` → 404, else 500). `updateOne`/`deleteOne` 404 on a non-24-hex id instead of leaking "Cast to ObjectId failed". Optional `{ withImages }` deletes the old Cloudinary asset on replace/delete.
 │   ├── claudinery/
 │   │   └── claudineryService.js ← Cloudinary wrapper (note: folder name typo is intentional/kept): uploadImage/deleteImage/deliveryUrl/isConfigured
-│   ├── public/{controller,route}.js  ← unauthenticated GET /api/products|gallery|testimonials|settings
+│   ├── public/{controller,route}.js  ← unauthenticated GET /api/products|gallery|testimonials|settings + POST /api/quotes
 │   ├── seed/data.mjs             ← canonical seed content (generated; see "Content migration")
 │   ├── middleware/
-│   │   └── authMiddleware.js    ← JWT gate: verifies Bearer token, loads admin, sets req.admin
+│   │   ├── authMiddleware.js    ← JWT gate: verifies Bearer token, loads admin, sets req.admin
+│   │   └── quoteRateLimit.js    ← 10 POSTs/IP/hour sliding window for POST /api/quotes (no dependency)
 │   └── admin/
 │       ├── route.js             ← /admin router (register [secret-gated], admin-login PUBLIC → middleware → protected routes)
 │       ├── auth/
@@ -81,10 +95,26 @@ GET /api/products     → products that HAVE a slug, ascending createdAt
 GET /api/gallery      → all gallery items
 GET /api/testimonials → all testimonials
 GET /api/settings     → the single settings doc
+POST /api/quotes      → submit a quote/contact request (rate limited)
 ```
-- **`GET /api/quotes` does not exist (404) on purpose.** Quote submission is a separate, still-unbuilt feature; the contact/quote forms post to FormSubmit.
+- **`GET /api/quotes` still does not exist (404) on purpose** — submission is public, *reading other people's quotes is not*. `e2e.mjs` asserts that 404 so it can't be reintroduced by accident.
 - `src/public/controller.js` maps documents into the shapes the public components expect. The important part: **`id` is the product `slug`, not the Mongo `_id`**, so `/products/:slug` URLs and `gallery.linkedProductId` are both slug-based. This is why public products are filtered to `slug != ""` — a product without a slug has no public URL and is deliberately invisible (the "test product 1" row is in this state).
 - The public response deliberately **omits `imgPublicId`** — that is the value the backend uses to destroy the Cloudinary asset and has no business being public.
+
+### `POST /api/quotes` — public quote submission
+- Route: `PublicRoute.post("/quotes", quoteRateLimit, createPublicQuote)`. Rate limit runs **first**, so even rejected submissions consume quota.
+- **`createPublicQuote` builds the document field by field and never spreads `req.body`.** `status` is hardcoded to `"new"` and the timestamps come from `{ timestamps: true }`. This is deliberate: spreading the body would let a crafted POST pre-`closed` its own quote or backdate it. `e2e.mjs` checks both.
+- The 201 response returns only `{ id, createdAt }` — never the stored doc, which would echo the customer's email/message straight back.
+- Validation is hand-rolled (name/email present, `QUOTE_EMAIL_PATTERN` from `quotes/model.js`) so the messages are human-readable, then `fail(res, error, 400)` catches anything Mongoose rejects. The public 400s use the same `{ status, message, errors }` envelope as everything else.
+- **Honeypot:** a `website` field, hidden off-screen with `aria-hidden` + `tabIndex={-1}` in both forms. If it comes back non-empty the request is answered **201 without storing anything** — replying with an error tells the bot it was caught. `e2e.mjs` asserts both the 201 and the no-op.
+- **Rate limit** is `src/middleware/quoteRateLimit.js`: 10 requests per IP per hour, in-memory sliding window, no dependency. It buckets on **`X-Forwarded-For` first, then `req.ip`** — behind a proxy without `app.set("trust proxy", ...)` express reports the *proxy's* address, which would collapse every visitor into one shared bucket. It is in-memory, so it resets on restart and does not span multiple instances; move it to Redis if this is ever deployed to more than one.
+- 429 responses set `Retry-After` and return the standard envelope with a "call us directly" message rather than a bare error.
+
+### The quote document changed shape (do not reintroduce `date`)
+- **`date` is gone from the schema.** It was a `String` that nothing ever populated, which is why the admin Date column was blank. `{ timestamps: true }` already gives `createdAt`/`updatedAt` as real Dates; `formatWhen()` (`admin/utils/formatWhen.ts`) renders them. Both are now in the admin `QuoteRequest` type.
+- **New fields, because the forms always collected them and Mongoose silently dropped them:** `service` (contact form), `quantity`, `engrave`, `attachment` (quote modal). Every string is `trim` + `maxlength`-capped so the admin `PUT` (which runs `runValidators: true`) cannot write absurd values.
+- `email` is `required` **and** `match: QUOTE_EMAIL_PATTERN`, so the admin `PUT` validates format too. Both public forms therefore mark the email input `required` — previously it was optional in the UI while the schema demanded it, which would have 400'd.
+- `quantity` is a `String`, not a Number: the modal's input can be cleared mid-edit, and a Number field would fail validation on `""`.
 - The frontend reaches these only through `src/app/client/utils/api.ts` (`publicApi`). Do not hardcode `http://localhost:3000` in a component.
 
 ### `?f_auto&q_auto` is NOT how you optimise a Cloudinary URL (gotcha)
@@ -101,7 +131,7 @@ Verified with a browser `Accept: image/webp` header: the first returns `image/we
 - `npm run seed` is **guarded**: it refuses to run when any product already has a slug, so it can never silently double-seed. `npm run seed -- --force` wipes and reseeds, and it destroys the Cloudinary assets of the rows it removes (otherwise every reseed would orphan ~19 assets, because Cloudinary suffixes colliding filenames).
 - Each seeded doc keeps a `sourceImage` field (e.g. `image-2.png`) so a re-upload can find the right local file. It is stripped before insert.
 - `npm run seed:dump` regenerates `data.mjs` **from the current database**, which is how `sourceImage` was recovered: the Cloudinary publicId already ends in the original filename (`crystal-digital/products/image-2.png`). Re-run it after editing content in the admin if you want the seed file to reflect reality.
-- `npm run state` prints DB row counts plus a Cloudinary orphan/dangling audit — the fastest way to confirm an upload/delete cycle left nothing behind. `npm run e2e` exercises the admin→public product path (create without a slug is rejected, create/update/delete, public visibility, partial update not clobbering other fields).
+- `npm run state` prints DB row counts plus a Cloudinary orphan/dangling audit — the fastest way to confirm an upload/delete cycle left nothing behind. `npm run e2e` exercises the admin→public product path *and* the public quote path (create without a slug is rejected, create/update/delete, public visibility, partial update not clobbering other fields, quote submission, `status`/`createdAt` injection ignored, honeypot swallowed but not stored, `GET /api/quotes` still 404, rate limit bites). **32 checks, all green.** Two harness details worth preserving: the `call()` helper parses defensively because Express's own 404 is an HTML page, and each run sends a random `X-Forwarded-For` so the per-IP quote limiter can't make a second run inside the hour fail with 429. A crashed run leaks rows, so the suite first sweeps any `@example.com` quote left behind by a previous attempt.
 
 ### Auth security rules (do not regress these)
 - **`POST /admin/register` is secret-gated.** It requires a `secret` body field matching `ADMIN_REGISTER_SECRET`, compared with `crypto.timingSafeEqual` (length-checked first). Without it, anyone could self-register an admin and get full write access to every CRUD route. If `ADMIN_REGISTER_SECRET` is unset the endpoint returns **503 and refuses to register** — it never falls back to open access.
@@ -126,7 +156,7 @@ Verified with a browser `Accept: image/webp` header: the first returns `image/we
   - `types/interface/<area>/` — TypeScript interfaces (product, quote, gallery, testimonial, setting: `adminProduct.ts` (has a required `slug`), `quoteRequest.ts`, `gakkeryItem.ts`, `testimonials.ts`, `siteSetting.ts`)
   - `data/seed.ts` — only `SEED_SETTINGS` remains (the placeholder shown before `GET /admin/settings` resolves). The other four arrays were dead leftovers from the localStorage era and were deleted.
   - `constants/admin.tsx` — admin constants + nav: `PRODUCT_CATS`, `GALLERY_CATS`, `STATUS_COLORS`, `STATUS_BG`, `NAV_ITEMS`, and the `AdminSection` type. **Must stay `.tsx`** because `NAV_ITEMS` contains JSX icon elements (JSX doesn't parse in `.ts` files).
-  - `utils/api.ts` — the ONLY place the admin talks HTTP (see "Data / persistence"); `utils/storage.tsx` — `load`/`save` localStorage helpers (newsletter subscribers only now, not CRUD); `utils/sendNotification.tsx` — `sendNotificationEmail`
+  - `utils/api.ts` — the ONLY place the admin talks HTTP (see "Data / persistence"); `utils/storage.tsx` — `load`/`save` localStorage helpers (newsletter subscribers only now, not CRUD); `utils/sendNotification.tsx` — `sendNotificationEmail`; `utils/formatWhen.ts` — `formatWhen(iso)`, shared by the Quotes table/detail modal and the dashboard's recent-quotes list
   - `components/ui/` — one file per admin UI primitive: `badge.tsx` (`Badge`), `modal.tsx` (`Modal`), `confirmModal.tsx` (`ConfirmModal`), `input.tsx` (`Input`), `Textarea.tsx` (`Textarea`), `select.tsx` (`Select`), `imageUploadField.tsx` (`ImageUploadField`)
   - `components/layout/` — admin chrome: `adminLogin.tsx` (`AdminLogin` — POSTs `{ email, password }` to the backend `/admin/admin-login`; on success stores `cdaah_admin` + JWT `cdaah_token` in sessionStorage), `sidebar.tsx` (`Sidebar` — router `<Link>`-based nav, active section derived from URL), `adminProvider.tsx` (`AdminProvider` context + `useAdmin()` hook — owns ALL admin state: auth (`sessionStorage["cdaah_admin"]`), the five MongoDB-backed collections and their per-item async mutators, `loading`/`error`, `quoteCount`; pages consume data via `useAdmin()` instead of props), `adminLayout.tsx` (`AdminLayout` — the blueprint: confirmation dialog + `Sidebar` + top bar header + `<main><Outlet/></main>`; no props, derives `section` from the URL path)
   - `pages/` — one file per dashboard panel: `DashBoard.tsx` (`AdminOverview` — uses `useNavigate` instead of `setSection`), `adminProduct.tsx` (`AdminProducts` + `ProductModal` + `emptyProduct` + `slugify`; the modal auto-fills `slug` from the name until the admin edits the field by hand), `quoteRequest.tsx` (`AdminQuotes`), `galleryModal.tsx` (`AdminGallery` + `GalleryModal`), `testimonials.tsx` (`AdminTestimonials` + `TestimonialModal`), `setting.tsx` (`AdminSettings`)
@@ -138,7 +168,7 @@ src/app/client/
 ├── types/          → TypeScript interfaces only (e.g. types/Product.ts)
 ├── data/           → **empty** (products/gallery/testimonials now come from MongoDB; sizes live on each product doc)
 ├── hooks/          → shared React hooks (useInView, useCounter)
-├── utils/          → `api.ts` (`publicApi`, `PublicApiError`, `cdn`) — the ONLY place the public site talks HTTP
+├── utils/          → `api.ts` (`publicApi` incl. `createQuote`, `PublicApiError`, `cdn`) — the ONLY place the public site talks HTTP; `notifyOwner.ts` (`notifyOwner`, FormSubmit owner alert)
 ├── components/
 │   ├── layout/     → site-wide chrome: Navbar, Footer, BackToTop, globalStyle (globalStyles + GlobalStyles), siteDataProvider (useSiteData)
 │   └── pages/      → section components grouped by route
@@ -162,7 +192,7 @@ src/app/client/
 | `useInView(threshold)` | `hooks/useInView.ts` | all home sections, StatCounter, ProductDetail, About |
 | `useCounter(target, active)` | `hooks/useCounter.ts` | StatCounter (0 → target animation) |
 | `Product` (type) | `types/Product.ts` | Gallery, ProductDetail, FeaturedProducts, QuoteModal |
-| `PublicGalleryItem`, `PublicTestimonial` | `types/Public.ts` | Gallery, Testimonials |
+| `PublicGalleryItem`, `PublicTestimonial`, `QuoteSubmission` | `types/Public.ts` | Gallery, Testimonials, both quote forms |
 | `products`/`gallery`/`testimonials` (+ `loading`, `error`) | `components/layout/siteDataProvider.tsx` via `useSiteData()` | FeaturedProducts, Gallery, ProductDetail, Testimonials |
 | `ImageWithFallback` | `src/app/components/figma/ImageWithFallback.tsx` | images with broken-image fallback |
 
@@ -176,17 +206,25 @@ src/app/client/
 
 ### Data / persistence
 - **Public products/gallery/testimonials now come from MongoDB** through the public API (see "Public read API"). `data/products.ts` and `data/productSize.ts` were **deleted**; sizes live on each product document. Marketing/hero/about/contact imagery is still bundled locally in `src/imports/`.
-- The contact/quote forms still post a WhatsApp-style FormSubmit message — quotes are **not** wired to the API yet (`/api/quotes` deliberately 404s).
+- The contact/quote forms now **POST to `/api/quotes`** (see "Public read API"); FormSubmit is used only for the owner-alert email.
 - Admin login goes through the backend (`POST /admin/admin-login`): credentials are not hardcoded in the frontend; the returned JWT is stored as `cdaah_token` in sessionStorage.
 - **The admin dashboard IS now fully wired to the backend CRUD for all 5 resources.** There are no `localStorage` seeds left in the admin data path — `adminProvider.tsx` fetches from MongoDB and every mutation is a real API call.
   - `utils/api.ts` is the **single** place that talks HTTP: `API_BASE` (`VITE_API_BASE`, default `http://localhost:3000`), `getToken()`, `ApiError`, and the `api.{getAll,create,update,remove,getSettings,saveSettings}` verbs. It injects `Authorization: Bearer`, prefixes `/admin`, and **calls a registered unauthorized handler on any 401** (the provider registers `onLogout`, so an expired token self-heals by logging out instead of hanging). `adminLogin.tsx` and `imageUploadField.tsx` import `API_BASE`/`getToken()` from here — do not hardcode `http://localhost:3000` anywhere.
   - Response contract is uniformly `{ status, message?, data?, errors? }`. `errors` is a field→message map on validation failure and `api.ts` joins it into the banner text.
-  - `adminProvider` exposes **per-item async** methods, not array setters: `createProduct/updateProduct/deleteProduct`, `createGalleryItem/…`, `createTestimonial/…`, `updateQuoteStatus(id, status)`, `saveSettings`. It also exposes `loading`, `error`, `clearError`, `quoteCount`. The array setters (`setProducts` etc.) are **gone** — pages must not reintroduce them.
+  - `adminProvider` exposes **per-item async** methods, not array setters: `createProduct/updateProduct/deleteProduct`, `createGalleryItem/…`, `createTestimonial/…`, `updateQuoteStatus(id, status)`, `deleteQuote(id)`, `refreshQuotes()`, `saveSettings`. It also exposes `loading`, `error`, `clearError`, `quoteCount`. The array setters (`setProducts` etc.) are **gone** — pages must not reintroduce them.
   - On mount (and after login) the provider `Promise.all`s all five GETs. `AdminApp.tsx` renders a spinner while that first load is in flight, so pages never flash empty tables.
+  - **The provider never refetches on a timer**, so a quote submitted by a customer will not appear until you press **Refresh** on the Quotes page (which calls `refreshQuotes()`) or reload. `quoteRequest.tsx` also calls `refreshQuotes()` on mount, so navigating away and back picks up new rows. Polling was deliberately not added — it would silently swap rows under an open detail modal.
   - `updateQuoteStatus` sends **only** `{ status }`. The backend uses `findByIdAndUpdate` (not `replaceOne`), so partial updates preserve the other fields — this is what makes the partial update safe.
   - **Known limitation: 15-minute token expiry with no refresh flow.** A 401 logs the admin out and they must sign in again. `REFRESH_TOKEN_SECRET` is in `.env` but still unused. Adding refresh tokens is the natural next step.
 - `utils/storage.tsx` (`load`/`save`) is still used for a couple of non-CRUD concerns (e.g. the newsletter subscribers list in `adminProduct.tsx`), so don't delete it.
-- The public site **is** connected for products, gallery and testimonials. **Quote submission is the remaining gap** — the forms still post to FormSubmit and no `POST /api/quotes` exists.
+- The public site **is** connected for products, gallery, testimonials **and quote submission** — `ContactPage.tsx` and `productQuoteModal.tsx` POST to `/api/quotes` via `publicApi.createQuote`. There is no remaining functional gap on the public side.
+- **All email goes through FormSubmit, not a backend mailer.** There is no mail dependency in the backend at all. Two callers: `client/utils/notifyOwner.ts` (public form → owner) and `admin/utils/sendNotification.tsx` (`sendNotificationEmail`, admin → customer on a quote status change). Both POST to `formsubmit.co/ajax/<recipient>` and both are fire-and-forget, because a failed alert must never surface to a customer whose quote is already safely saved.
+- **⚠ FormSubmit requires a per-recipient activation click, and that is why admin→customer email is not actually usable.** Each recipient address must be activated once by clicking a link in a FormSubmit email. Verified: `anmolankit00@gmail.com` returns `{"success":"true"}` once activated, while `anmolankit00+permi@gmail.com` (same inbox, different address) still returns `This form needs Activation`. Consequences:
+  - The **owner** alert works — `anmolankit00@gmail.com` is activated (done 2026-09-27). Both public forms still need their `OWNER_EMAIL` constants to agree.
+  - **Customer** status emails effectively don't work: the first email to any customer is an activation request, not the status update, and asking an enquirer to click an "Activate Form" link from your business reads as phishing. Do not present this feature to the business as working.
+  - FormSubmit answers **HTTP 200 even when it refuses to send** — the failure is only in the body's `success` field. `notifyOwner` now reads that field and `console.warn`s; `sendNotificationEmail` still does **not** (it has a bare `catch {}`), so admin→customer failures are still invisible. Fix that when the mailer is replaced.
+- **The real fix is a transactional email service.** Resend (free tier ~3,000/mo) is the recommended one: a few lines of Node, and it would absorb both callers, retiring `notifyOwner.ts` + `sendNotification.tsx` and dropping the third-party-address exposure. Nodemailer + a Gmail app password is the free alternative but caps at 500/day and sends from a personal account. **Deliberately deferred — do not start this without being asked.**
+- The quote modal's file input still only captures the **filename**; the bytes are never uploaded. The UI now says so, and the admin detail modal shows an amber reminder to ask the customer to email the artwork. A real upload needs a public upload route, which is a spam surface — treat it as its own piece of work.
 
 ## Conventions (IMPORTANT)
 0. **Ask before making changes** — the user may be discussing/planning and NOT asking for implementation. When they ask a question or describe an idea, clarify first and get explicit confirmation (e.g. "want me to do it?") before editing files, moving/deleting code, or changing architecture. Never assume "I'd like to do X" means "go change the code".

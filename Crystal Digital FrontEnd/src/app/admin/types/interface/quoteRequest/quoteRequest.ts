@@ -5,7 +5,12 @@ export interface QuoteRequest {
   phone: string;
   product: string;
   size?: string;
+  service: string;
+  quantity: string;
+  engrave: string;
+  attachment: string;
   message: string;
-  date: string;
   status: "new" | "reviewed" | "quoted" | "closed";
+  createdAt: string;
+  updatedAt: string;
 }

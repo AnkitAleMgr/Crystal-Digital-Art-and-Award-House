@@ -2,6 +2,10 @@ import { CheckCircle, Phone, Send, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Product } from "../../../types/Product";
 import { ImageWithFallback } from "../../../../components/figma/ImageWithFallback";
+import { PublicApiError, publicApi } from "../../../utils/api";
+import { notifyOwner } from "../../../utils/notifyOwner";
+
+const OWNER_EMAIL = "anmolankit00@gmail.com";
 
 // ── QUOTE MODAL ───────────────────────────────────────────────────────────────
 export function QuoteModal({
@@ -15,7 +19,8 @@ export function QuoteModal({
 }) {
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [fileName, setFileName] = useState("");
   const [form, setForm] = useState({
     name: "",
@@ -24,6 +29,7 @@ export function QuoteModal({
     quantity: "",
     engrave: "",
     size: initialSize || "",
+    website: "",
   });
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -33,28 +39,46 @@ export function QuoteModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSending(true);
-    setSendError(false);
+    setSendError("");
+    setFieldErrors({});
+
     try {
-      await fetch("https://formsubmit.co/ajax/anmolankit00@gmail.com", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          _subject: `Quote Request — ${product.name} | Crystal Digital`,
-          Name: form.name,
-          Email: form.email || "Not provided",
-          Phone: form.phone,
-          Product: product.name,
-          Category: product.cat,
-          Selected_Size: form.size || "Not specified",
-          Quantity: form.quantity || "Not specified",
-          Engraving_Text: form.engrave || "None",
-          Attached_File: fileName || "No file attached",
-          _template: "table",
-        }),
+      await publicApi.createQuote({
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        product: product.name,
+        size: form.size,
+        quantity: form.quantity,
+        engrave: form.engrave,
+        attachment: fileName,
+        website: form.website,
       });
+
+      notifyOwner(`Quote Request — ${product.name} | Crystal Digital`, {
+        To: OWNER_EMAIL,
+        Name: form.name,
+        Email: form.email || "Not provided",
+        Phone: form.phone,
+        Product: product.name,
+        Category: product.cat,
+        Selected_Size: form.size || "Not specified",
+        Quantity: form.quantity || "Not specified",
+        Engraving_Text: form.engrave || "None",
+        Artwork_Reference: fileName || "No file attached",
+      });
+
       setSent(true);
-    } catch {
-      setSendError(true);
+    } catch (error) {
+      if (error instanceof PublicApiError) {
+        setFieldErrors(error.fields);
+        setSendError(error.message);
+        return;
+      }
+
+      setSendError(
+        "Failed to send — please try again or contact us directly on WhatsApp."
+      );
     } finally {
       setSending(false);
     }
@@ -271,6 +295,11 @@ export function QuoteModal({
                         "1.5px solid #E2E8F0")
                     }
                   />
+                  {fieldErrors.name && (
+                    <p className="mt-1.5 text-xs text-red-600">
+                      {fieldErrors.name}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
@@ -308,10 +337,12 @@ export function QuoteModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
-                    Email Address
+                    Email Address{" "}
+                    <span style={{ color: "#DC2626" }}>*</span>
                   </label>
                   <input
                     type="email"
+                    required
                     value={form.email}
                     onChange={(e) =>
                       setForm({
@@ -323,7 +354,9 @@ export function QuoteModal({
                     className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
                     style={{
                       background: "#F8FAFC",
-                      border: "1.5px solid #E2E8F0",
+                      border: fieldErrors.email
+                        ? "1.5px solid #FCA5A5"
+                        : "1.5px solid #E2E8F0",
                     }}
                     onFocus={(e) =>
                       (e.target.style.border =
@@ -334,6 +367,11 @@ export function QuoteModal({
                         "1.5px solid #E2E8F0")
                     }
                   />
+                  {fieldErrors.email && (
+                    <p className="mt-1.5 text-xs text-red-600">
+                      {fieldErrors.email}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
@@ -410,7 +448,8 @@ export function QuoteModal({
                         "Click to upload logo or image"}
                     </p>
                     <p className="text-xs text-gray-400">
-                      PNG, JPG, SVG · Max 5MB
+                      We note the file name — email the artwork to us
+                      separately
                     </p>
                   </div>
                   <input
@@ -454,9 +493,32 @@ export function QuoteModal({
               </div>
 
               {/* Submit */}
+              <div
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  left: "-9999px",
+                  width: "1px",
+                  height: "1px",
+                  overflow: "hidden",
+                }}
+              >
+                <label htmlFor="quote-website">Website</label>
+                <input
+                  id="quote-website"
+                  name="website"
+                  type="text"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={form.website}
+                  onChange={(e) =>
+                    setForm({ ...form, website: e.target.value })
+                  }
+                />
+              </div>
               {sendError && (
                 <p className="text-center text-xs text-red-500 bg-red-50 rounded-xl px-4 py-2.5 border border-red-100">
-                  Failed to send — please try again or contact us directly on WhatsApp.
+                  {sendError}
                 </p>
               )}
               <button

@@ -2,6 +2,8 @@ import { ProductModel } from "../admin/products/model.js";
 import { GalleryModel } from "../admin/gallery/model.js";
 import { TestimonialModel } from "../admin/testimonials/model.js";
 import { SettingModel } from "../admin/settings/model.js";
+import { QuoteModel, QUOTE_EMAIL_PATTERN } from "../admin/quotes/model.js";
+import { fail } from "../utils/crud.js";
 
 const publicProduct = (doc) => ({
   id: doc.slug,
@@ -75,5 +77,65 @@ export const getPublicSettings = async (req, res) => {
     res.json({ status: true, data: doc.toObject() });
   } catch (error) {
     res.status(500).json({ status: false, message: error.message });
+  }
+};
+
+const field = (value, max) => String(value ?? "").trim().slice(0, max);
+
+export const createPublicQuote = async (req, res) => {
+  // Honeypot: the field is hidden from humans, so anything in it is a bot.
+  // Answer 201 anyway — replying with an error tells the bot it was caught.
+  if (field(req.body.website, 200)) {
+    return res.status(201).json({ status: true, data: { id: null, received: true } });
+  }
+
+  const name = field(req.body.name, 120);
+  const email = field(req.body.email, 160).toLowerCase();
+  const message = field(req.body.message, 2000);
+
+  const errors = {};
+
+  if (!name) {
+    errors.name = "Please tell us your name.";
+  }
+
+  if (!email) {
+    errors.email = "We need an email address to send your quote.";
+  } else if (!QUOTE_EMAIL_PATTERN.test(email)) {
+    errors.email = "That email address doesn't look right.";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return res.status(400).json({
+      status: false,
+      message: "Please fix the highlighted fields.",
+      errors,
+    });
+  }
+
+  try {
+    // Built field by field rather than spreading req.body: "status" and the
+    // timestamps are server-owned, so a crafted POST cannot pre-close its own
+    // quote or backdate it.
+    const doc = await QuoteModel.create({
+      name,
+      email,
+      message,
+      phone: field(req.body.phone, 40),
+      product: field(req.body.product, 160),
+      size: field(req.body.size, 80),
+      service: field(req.body.service, 120),
+      quantity: field(req.body.quantity, 20),
+      engrave: field(req.body.engrave, 500),
+      attachment: field(req.body.attachment, 160),
+      status: "new",
+    });
+
+    res.status(201).json({
+      status: true,
+      data: { id: String(doc._id), createdAt: doc.createdAt },
+    });
+  } catch (error) {
+    fail(res, error, 400);
   }
 };

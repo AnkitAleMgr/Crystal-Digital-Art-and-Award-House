@@ -1,24 +1,64 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { QuoteRequest } from "../types/interface/quoteRequest/quoteRequest";
 import { Badge } from "../components/ui/badge";
 import { Modal } from "../components/ui/modal";
+import { ConfirmModal } from "../components/ui/confirmModal";
 import { sendNotificationEmail } from "../utils/sendNotification";
+import { formatWhen } from "../utils/formatWhen";
 import { STATUS_COLORS } from "../constants/admin";
 import { useAdmin } from "../components/layout/adminProvider";
-import { Eye, Search, User, AlertCircle } from "lucide-react";
+import { AlertCircle, Eye, Loader2, RefreshCw, Search, Trash2, User } from "lucide-react";
+
+function Detail({ label, value }: { label: string; value: string }) {
+  if (!value) return null;
+  return (
+    <div>
+      <div className="text-xs text-gray-500 mb-1">{label}</div>
+      <div className="font-semibold text-gray-800 text-sm break-words">{value}</div>
+    </div>
+  );
+}
 
 // ── Quote Requests Panel ──────────────────────────────────────────────────────
 export function AdminQuotes() {
-  const { quotes, updateQuoteStatus, quoteCount, error, clearError } = useAdmin();
+  const { quotes, updateQuoteStatus, deleteQuote, refreshQuotes, quoteCount, error, clearError } = useAdmin();
   const [viewing, setViewing] = useState<QuoteRequest | null>(null);
+  const [deleting, setDeleting] = useState<QuoteRequest | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | QuoteRequest["status"]>("all");
   const [search, setSearch] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    refreshQuotes().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filtered = quotes.filter((q) =>
     (statusFilter === "all" || q.status === statusFilter) &&
     (q.name.toLowerCase().includes(search.toLowerCase()) || q.product.toLowerCase().includes(search.toLowerCase()) || q.email.toLowerCase().includes(search.toLowerCase()))
   );
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      await refreshQuotes();
+    } catch {
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleting) return;
+    const id = deleting.id;
+    setDeleting(null);
+    setViewing((v) => (v?.id === id ? null : v));
+    try {
+      await deleteQuote(id);
+    } catch {
+    }
+  }
 
   async function updateStatus(id: string, status: QuoteRequest["status"]) {
     const quote = quotes.find((q) => q.id === id);
@@ -62,9 +102,19 @@ export function AdminQuotes() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800" style={{ fontFamily: "Poppins, sans-serif" }}>Quote Requests</h1>
-        <p className="text-gray-500 text-sm mt-0.5">{quoteCount} new, {quotes.length} total</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800" style={{ fontFamily: "Poppins, sans-serif" }}>Quote Requests</h1>
+          <p className="text-gray-500 text-sm mt-0.5">{quoteCount} new, {quotes.length} total</p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="flex items-center gap-2 self-start px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {refreshing ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+          Refresh
+        </button>
       </div>
 
       {error && (
@@ -96,7 +146,7 @@ export function AdminQuotes() {
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Customer</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">Product</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Date</th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Received</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
                 <th className="text-right px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
               </tr>
@@ -109,10 +159,10 @@ export function AdminQuotes() {
                     <div className="text-gray-500 text-xs">{q.email}</div>
                   </td>
                   <td className="px-5 py-4 hidden sm:table-cell">
-                    <span className="text-sm text-gray-700">{q.product}</span>
+                    <span className="text-sm text-gray-700">{q.product || q.service || "—"}</span>
                   </td>
                   <td className="px-5 py-4 hidden md:table-cell">
-                    <span className="text-xs text-gray-500">{q.date}</span>
+                    <span className="text-xs text-gray-500 whitespace-nowrap">{formatWhen(q.createdAt)}</span>
                   </td>
                   <td className="px-5 py-4">
                     <Badge status={q.status} />
@@ -121,6 +171,9 @@ export function AdminQuotes() {
                     <div className="flex items-center justify-end gap-2">
                       <button onClick={() => setViewing(q)} className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors">
                         <Eye size={15} />
+                      </button>
+                      <button onClick={() => setDeleting(q)} className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors">
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </td>
@@ -133,6 +186,10 @@ export function AdminQuotes() {
           </table>
         </div>
       </div>
+
+      {deleting && (
+        <ConfirmModal message={`Delete the quote request from "${deleting.name}"? This cannot be undone.`} onConfirm={handleDelete} onCancel={() => setDeleting(null)} />
+      )}
 
       {/* View modal */}
       {viewing && (
@@ -149,8 +206,10 @@ export function AdminQuotes() {
               <div className="ml-auto"><Badge status={viewing.status} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-gray-50">
-              <div><div className="text-xs text-gray-500 mb-1">Product Interested In</div><div className="font-semibold text-gray-800 text-sm">{viewing.product}</div></div>
-              <div><div className="text-xs text-gray-500 mb-1">Request Date</div><div className="font-semibold text-gray-800 text-sm">{viewing.date}</div></div>
+              <Detail label="Product Interested In" value={viewing.product} />
+              <Detail label="Service Enquiry" value={viewing.service} />
+              <Detail label="Quantity" value={viewing.quantity} />
+              <Detail label="Request Date" value={formatWhen(viewing.createdAt)} />
               <div className="col-span-2">
                 <div className="text-xs text-gray-500 mb-1">Selected Size</div>
                 {viewing.size ? (
@@ -165,10 +224,26 @@ export function AdminQuotes() {
                 )}
               </div>
             </div>
-            <div>
-              <div className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Message</div>
-              <p className="text-gray-700 text-sm leading-relaxed bg-gray-50 rounded-xl p-4">{viewing.message}</p>
-            </div>
+            {viewing.engrave && (
+              <div>
+                <div className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Text to Engrave / Special Instructions</div>
+                <p className="text-gray-700 text-sm leading-relaxed bg-gray-50 rounded-xl p-4 whitespace-pre-wrap">{viewing.engrave}</p>
+              </div>
+            )}
+            {viewing.attachment && (
+              <div className="flex items-center gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50">
+                <AlertCircle size={16} className="text-amber-600 flex-shrink-0" />
+                <p className="text-xs text-amber-800">
+                  Artwork referenced: <span className="font-semibold">{viewing.attachment}</span> — the file itself was not uploaded, ask the customer to email it.
+                </p>
+              </div>
+            )}
+            {viewing.message && (
+              <div>
+                <div className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Message</div>
+                <p className="text-gray-700 text-sm leading-relaxed bg-gray-50 rounded-xl p-4 whitespace-pre-wrap">{viewing.message}</p>
+              </div>
+            )}
             <div>
               <div className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Update Status</div>
               <div className="flex flex-wrap gap-2">

@@ -28,6 +28,8 @@ type AdminContextValue = {
   deleteTestimonial: (id: string) => Promise<void>;
   quotes: QuoteRequest[];
   updateQuoteStatus: (id: string, status: QuoteRequest["status"]) => Promise<void>;
+  deleteQuote: (id: string) => Promise<void>;
+  refreshQuotes: () => Promise<void>;
   settings: SiteSettings;
   saveSettings: (data: SiteSettings) => Promise<void>;
   quoteCount: number;
@@ -164,6 +166,16 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     setQuotes((prev) => prev.map((q) => (q.id === id ? updated : q)));
   };
 
+  const deleteQuote = async (id: string) => {
+    await run(() => api.remove("quotes", id));
+    setQuotes((prev) => prev.filter((q) => q.id !== id));
+  };
+
+  const refreshQuotes = async () => {
+    const fresh = await run(() => api.getAll<QuoteRequest>("quotes"));
+    setQuotes(fresh);
+  };
+
   const saveSettings = async (data: SiteSettings) => {
     const saved = await run(() => api.saveSettings<SiteSettings>(data));
     if (saved) setSettings(saved);
@@ -194,6 +206,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         deleteTestimonial,
         quotes,
         updateQuoteStatus,
+        deleteQuote,
+        refreshQuotes,
         settings,
         saveSettings,
         quoteCount,

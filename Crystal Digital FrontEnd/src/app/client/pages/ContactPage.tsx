@@ -2,20 +2,28 @@ import { useState } from "react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { Section, SectionHeading, SectionLabel } from "../components/pages/home/homeSection";
 import img8 from "../../../imports/image-8.png";
+import { PublicApiError, publicApi } from "../utils/api";
+import { notifyOwner } from "../utils/notifyOwner";
 
 import { CheckCircle, ChevronDown, Clock, Facebook, Instagram, Mail, MapPin, MessageCircle, Phone, Send } from "lucide-react";
 
+const OWNER_EMAIL = "anmolankit00@gmail.com";
+
+const EMPTY_FORM = {
+  name: "",
+  phone: "",
+  email: "",
+  service: "",
+  message: "",
+  website: "",
+};
+
 export function ContactPage() {
-  const [form, setForm] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    service: "",
-    message: "",
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const services_list = [
     "Crystal Awards",
     "Corporate Trophies",
@@ -32,39 +40,41 @@ export function ContactPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSending(true);
-    setSendError(false);
+    setSendError("");
+    setFieldErrors({});
+
     try {
-      await fetch(
-        "https://formsubmit.co/ajax/anmolankit00@gmail.com",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            _subject:
-              "New Contact Message — Crystal Digital Art & Award House",
-            Name: form.name,
-            Email: form.email,
-            Phone: form.phone,
-            Service_Enquiry: form.service || "Not specified",
-            Message: form.message,
-            _template: "table",
-          }),
-        },
-      );
+      await publicApi.createQuote({
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        service: form.service,
+        message: form.message,
+        website: form.website,
+      });
+
+      notifyOwner("New Contact Message — Crystal Digital Art & Award House", {
+        To: OWNER_EMAIL,
+        Name: form.name,
+        Email: form.email || "Not provided",
+        Phone: form.phone || "Not provided",
+        Service_Enquiry: form.service || "Not specified",
+        Message: form.message,
+      });
+
       setSent(true);
       setTimeout(() => setSent(false), 5000);
-      setForm({
-        name: "",
-        phone: "",
-        email: "",
-        service: "",
-        message: "",
-      });
-    } catch {
-      setSendError(true);
+      setForm(EMPTY_FORM);
+    } catch (error) {
+      if (error instanceof PublicApiError) {
+        setFieldErrors(error.fields);
+        setSendError(error.message);
+        return;
+      }
+
+      setSendError(
+        "Failed to send — please try again or reach us on WhatsApp directly."
+      );
     } finally {
       setSending(false);
     }
@@ -292,9 +302,16 @@ export function ContactPage() {
                     className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all focus:ring-2 focus:ring-blue-400"
                     style={{
                       background: "#F8FAFC",
-                      border: "1px solid rgba(0,0,0,0.08)",
+                      border: fieldErrors.name
+                        ? "1px solid #FCA5A5"
+                        : "1px solid rgba(0,0,0,0.08)",
                     }}
                   />
+                  {fieldErrors.name && (
+                    <p className="mt-1.5 text-xs text-red-600">
+                      {fieldErrors.name}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">
@@ -319,10 +336,11 @@ export function ContactPage() {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                  Email Address
+                  Email Address *
                 </label>
                 <input
                   type="email"
+                  required
                   value={form.email}
                   onChange={(e) =>
                     setForm({ ...form, email: e.target.value })
@@ -331,9 +349,16 @@ export function ContactPage() {
                   className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all focus:ring-2 focus:ring-blue-400"
                   style={{
                     background: "#F8FAFC",
-                    border: "1px solid rgba(0,0,0,0.08)",
+                    border: fieldErrors.email
+                      ? "1px solid #FCA5A5"
+                      : "1px solid rgba(0,0,0,0.08)",
                   }}
                 />
+                {fieldErrors.email && (
+                  <p className="mt-1.5 text-xs text-red-600">
+                    {fieldErrors.email}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">
@@ -389,10 +414,32 @@ export function ContactPage() {
                   }}
                 />
               </div>
+              <div
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  left: "-9999px",
+                  width: "1px",
+                  height: "1px",
+                  overflow: "hidden",
+                }}
+              >
+                <label htmlFor="contact-website">Website</label>
+                <input
+                  id="contact-website"
+                  name="website"
+                  type="text"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={form.website}
+                  onChange={(e) =>
+                    setForm({ ...form, website: e.target.value })
+                  }
+                />
+              </div>
               {sendError && (
                 <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-2.5">
-                  Failed to send — please try again or reach us
-                  on WhatsApp directly.
+                  {sendError}
                 </p>
               )}
               <button
