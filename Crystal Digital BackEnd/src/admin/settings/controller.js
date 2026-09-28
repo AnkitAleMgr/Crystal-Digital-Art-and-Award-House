@@ -16,7 +16,7 @@ export const getSettings = async (req, res) => {
 export const updateSettings = async (req, res) => {
   try {
     const doc = await SettingModel.findOneAndUpdate({}, req.body, {
-      new: true,
+      returnDocument: "after",
       upsert: true,
       runValidators: true,
     });

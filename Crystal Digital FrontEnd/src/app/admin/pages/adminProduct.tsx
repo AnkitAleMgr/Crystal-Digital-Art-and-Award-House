@@ -6,8 +6,6 @@ import { Input } from "../components/ui/input";
 import { Modal } from "../components/ui/modal";
 import { Select } from "../components/ui/select";
 import { Textarea } from "../components/ui/Textarea";
-import { load } from "../utils/storage";
-import { sendNotificationEmail } from "../utils/sendNotification";
 import { useAdmin } from "../components/layout/adminProvider";
 import { PRODUCT_CATS } from "../constants/admin";
 import { Pencil, Plus, Search, Tag, Trash2, X, AlertCircle, Loader2 } from "lucide-react";
@@ -250,21 +248,6 @@ export function AdminProducts() {
         await updateProduct(editing.id, data);
       } else {
         await createProduct(data);
-        const subscribers: string[] = load("cdaah_subscribers", []);
-        subscribers.forEach((email) => {
-          sendNotificationEmail(
-            email,
-            `New Product: ${data.name} — Crystal Digital Art & Award House`,
-            {
-              Notification: "A new product has been added to Crystal Digital Art & Award House.",
-              Product_Name: data.name,
-              Category: data.cat,
-              Description: data.desc || "—",
-              Tags: data.tags?.join(", ") || "—",
-              Visit: "https://crystaldigital.com.np",
-            }
-          );
-        });
       }
       setShowModal(false);
       setEditing(null);

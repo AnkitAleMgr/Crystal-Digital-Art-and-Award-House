@@ -14,6 +14,20 @@ export interface PublicTestimonial {
   rating: number;
 }
 
+/** The business details rendered across the public site, from GET /api/settings. */
+export interface PublicSettings {
+  id?: string;
+  businessName: string;
+  tagline: string;
+  phone: string;
+  email: string;
+  address: string;
+  mapLink: string;
+  facebookUrl: string;
+  workingHours: string;
+  whatsapp: string;
+}
+
 export interface QuoteSubmission {
   name: string;
   email: string;

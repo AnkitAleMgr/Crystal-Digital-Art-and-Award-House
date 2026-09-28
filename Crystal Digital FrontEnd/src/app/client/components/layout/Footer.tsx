@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   useState,
   useEffect,
@@ -8,11 +8,13 @@ import {
 import { ImageWithFallback } from "../../../components/figma/ImageWithFallback";
 import logo from "../../../../imports/image.png";
 import { Facebook, Instagram, MapPin, MessageCircle, Send } from "lucide-react";
+import { useSiteData } from "./siteDataProvider";
+import { whatsappLink } from "../../data/siteDefaults";
 
 
 // ── FOOTER ────────────────────────────────────────────────────────────────────
 export function Footer() {
-  const navigate = useNavigate();
+  const { settings } = useSiteData();
   const [email, setEmail] = useState("");
   const [subState, setSubState] = useState<"idle" | "ok" | "dup" | "err">("idle");
 
@@ -65,16 +67,14 @@ export function Footer() {
               </div>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed mb-5">
-              Pokhara's trusted destination for premium awards,
-              trophies, laser engraving, and digital printing
-              services.
+              {settings.tagline}
             </p>
             <div className="flex gap-3">
               {[
                 {
                   icon: Facebook,
                   color: "#1877F2",
-                  href: "https://www.facebook.com/crystaldigital12712/",
+                  href: settings.facebookUrl,
                 },
                 {
                   icon: Instagram,
@@ -84,12 +84,12 @@ export function Footer() {
                 {
                   icon: MessageCircle,
                   color: "#25D366",
-                  href: "https://wa.me/9779856012712",
+                  href: whatsappLink(settings),
                 },
                 {
                   icon: MapPin,
                   color: "#EA4335",
-                  href: "https://www.google.com/maps/search/Crystal+Digital+Art+%26+Award+House+Pokhara+Nepal",
+                  href: settings.mapLink,
                 },
               ].map((s, i) => {
                 const Icon = s.icon;
@@ -217,8 +217,7 @@ export function Footer() {
                 className="text-blue-400 mt-0.5 flex-shrink-0"
               />
               <span className="text-gray-400 text-xs leading-relaxed">
-                Darbarthok Marga 1, Samsung Galli, Pokhara
-                33700, Nepal
+                {settings.address}
               </span>
             </div>
           </div>
@@ -229,14 +228,8 @@ export function Footer() {
           </p>
           <div className="flex items-center gap-4">
             <p className="text-gray-600 text-xs">
-              Crystal Digital Art & Award House, Pokhara, Nepal
+              {settings.businessName}
             </p>
-            <button
-              onClick={() => navigate("/admin")}
-              className="text-gray-400 text-xs hover:text-gray-600 transition-colors"
-            >
-              Admin
-            </button>
           </div>
         </div>
       </div>

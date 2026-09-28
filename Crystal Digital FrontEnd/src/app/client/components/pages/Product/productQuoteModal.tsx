@@ -3,9 +3,7 @@ import { useEffect, useState } from "react";
 import { Product } from "../../../types/Product";
 import { ImageWithFallback } from "../../../../components/figma/ImageWithFallback";
 import { PublicApiError, publicApi } from "../../../utils/api";
-import { notifyOwner } from "../../../utils/notifyOwner";
-
-const OWNER_EMAIL = "anmolankit00@gmail.com";
+import { useSiteData } from "../../layout/siteDataProvider";
 
 // ── QUOTE MODAL ───────────────────────────────────────────────────────────────
 export function QuoteModal({
@@ -22,6 +20,7 @@ export function QuoteModal({
   const [sendError, setSendError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [fileName, setFileName] = useState("");
+  const { settings } = useSiteData();
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -53,19 +52,6 @@ export function QuoteModal({
         engrave: form.engrave,
         attachment: fileName,
         website: form.website,
-      });
-
-      notifyOwner(`Quote Request — ${product.name} | Crystal Digital`, {
-        To: OWNER_EMAIL,
-        Name: form.name,
-        Email: form.email || "Not provided",
-        Phone: form.phone,
-        Product: product.name,
-        Category: product.cat,
-        Selected_Size: form.size || "Not specified",
-        Quantity: form.quantity || "Not specified",
-        Engraving_Text: form.engrave || "None",
-        Artwork_Reference: fileName || "No file attached",
       });
 
       setSent(true);
@@ -162,7 +148,7 @@ export function QuoteModal({
             >
               <Phone size={15} style={{ color: "#16A34A" }} />
               <span className="text-sm text-green-800 font-medium">
-                061-523459 / 9856012712
+                {settings.phone}
               </span>
             </div>
             <button

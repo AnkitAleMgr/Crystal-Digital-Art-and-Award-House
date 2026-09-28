@@ -3,7 +3,8 @@ import { GalleryModel } from "../admin/gallery/model.js";
 import { TestimonialModel } from "../admin/testimonials/model.js";
 import { SettingModel } from "../admin/settings/model.js";
 import { QuoteModel, QUOTE_EMAIL_PATTERN } from "../admin/quotes/model.js";
-import { fail } from "../utils/crud.js";
+import { fail, mapDoc } from "../utils/crud.js";
+import { notifyOwnerOfQuote } from "../utils/notifications.js";
 
 const publicProduct = (doc) => ({
   id: doc.slug,
@@ -74,7 +75,9 @@ export const getPublicSettings = async (req, res) => {
     if (!doc) {
       return res.json({ status: true, data: null });
     }
-    res.json({ status: true, data: doc.toObject() });
+    // mapDoc, like every other route: it is what turns Mongo's _id/__v into the
+    // public `id`. This one used to hand back doc.toObject() verbatim.
+    res.json({ status: true, data: mapDoc(doc) });
   } catch (error) {
     res.status(500).json({ status: false, message: error.message });
   }
@@ -130,6 +133,11 @@ export const createPublicQuote = async (req, res) => {
       attachment: field(req.body.attachment, 160),
       status: "new",
     });
+
+    // Fire-and-forget on purpose. The quote is already saved, so a mail outage
+    // must not turn a successful submission into a failed form — the owner also
+    // sees every enquiry in the admin dashboard regardless.
+    notifyOwnerOfQuote(doc);
 
     res.status(201).json({
       status: true,

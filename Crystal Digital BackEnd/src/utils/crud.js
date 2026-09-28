@@ -5,7 +5,7 @@ export const mapDoc = (doc) => {
   return { id: _id, ...rest };
 };
 
-const isObjectId = (value) => /^[a-f\d]{24}$/i.test(String(value));
+export const isObjectId = (value) => /^[a-f\d]{24}$/i.test(String(value));
 
 export const fail = (res, error, status = 500) => {
   if (error.name === "ValidationError") {
@@ -80,7 +80,7 @@ export const updateOne = (Model, options = {}) => async (req, res) => {
       : null;
 
     const doc = await Model.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     });
 

@@ -3,11 +3,10 @@ import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { Section, SectionHeading, SectionLabel } from "../components/pages/home/homeSection";
 import img8 from "../../../imports/image-8.png";
 import { PublicApiError, publicApi } from "../utils/api";
-import { notifyOwner } from "../utils/notifyOwner";
+import { useSiteData } from "../components/layout/siteDataProvider";
+import { whatsappLink } from "../data/siteDefaults";
 
 import { CheckCircle, ChevronDown, Clock, Facebook, Instagram, Mail, MapPin, MessageCircle, Phone, Send } from "lucide-react";
-
-const OWNER_EMAIL = "anmolankit00@gmail.com";
 
 const EMPTY_FORM = {
   name: "",
@@ -19,6 +18,7 @@ const EMPTY_FORM = {
 };
 
 export function ContactPage() {
+  const { settings } = useSiteData();
   const [form, setForm] = useState(EMPTY_FORM);
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
@@ -51,15 +51,6 @@ export function ContactPage() {
         service: form.service,
         message: form.message,
         website: form.website,
-      });
-
-      notifyOwner("New Contact Message — Crystal Digital Art & Award House", {
-        To: OWNER_EMAIL,
-        Name: form.name,
-        Email: form.email || "Not provided",
-        Phone: form.phone || "Not provided",
-        Service_Enquiry: form.service || "Not specified",
-        Message: form.message,
       });
 
       setSent(true);
@@ -132,22 +123,22 @@ export function ContactPage() {
               {
                 icon: MapPin,
                 label: "Address",
-                val: "Darbarthok Marga 1, Samsung Galli, Pokhara 33700, Nepal",
+                val: settings.address,
               },
               {
                 icon: Phone,
                 label: "Phone",
-                val: "061-523459 / 9856012712",
+                val: settings.phone,
               },
               {
                 icon: Mail,
                 label: "Email",
-                val: "globallinksks@gmail.com",
+                val: settings.email,
               },
               {
                 icon: Clock,
                 label: "Hours",
-                val: "Monday – Saturday: 9:00 AM – 7:00 PM",
+                val: settings.workingHours,
               },
             ].map((c) => {
               const Icon = c.icon;
@@ -188,7 +179,7 @@ export function ContactPage() {
             <button
               onClick={() =>
                 window.open(
-                  "https://wa.me/9779856012712",
+                  whatsappLink(settings),
                   "_blank",
                 )
               }
@@ -211,7 +202,7 @@ export function ContactPage() {
                   icon: Facebook,
                   label: "Facebook",
                   color: "#1877F2",
-                  href: "https://www.facebook.com/crystaldigital12712/",
+                  href: settings.facebookUrl,
                 },
                 {
                   icon: Instagram,
@@ -223,7 +214,7 @@ export function ContactPage() {
                   icon: MapPin,
                   label: "Google Maps",
                   color: "#EA4335",
-                  href: "https://www.google.com/maps/search/Crystal+Digital+Art+%26+Award+House+Pokhara+Nepal",
+                  href: settings.mapLink,
                 },
               ].map((s) => {
                 const Icon = s.icon;

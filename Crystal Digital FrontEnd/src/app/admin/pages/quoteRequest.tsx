@@ -3,7 +3,6 @@ import { QuoteRequest } from "../types/interface/quoteRequest/quoteRequest";
 import { Badge } from "../components/ui/badge";
 import { Modal } from "../components/ui/modal";
 import { ConfirmModal } from "../components/ui/confirmModal";
-import { sendNotificationEmail } from "../utils/sendNotification";
 import { formatWhen } from "../utils/formatWhen";
 import { STATUS_COLORS } from "../constants/admin";
 import { useAdmin } from "../components/layout/adminProvider";
@@ -61,39 +60,12 @@ export function AdminQuotes() {
   }
 
   async function updateStatus(id: string, status: QuoteRequest["status"]) {
-    const quote = quotes.find((q) => q.id === id);
-    if (!quote || updatingId) return;
+    if (updatingId) return;
 
     setUpdatingId(id);
     try {
       await updateQuoteStatus(id, status);
       if (viewing?.id === id) setViewing((v) => v ? { ...v, status } : null);
-      if (quote.email) {
-        const statusLabels: Record<QuoteRequest["status"], string> = {
-          new: "Received",
-          reviewed: "Under Review",
-          quoted: "Price Quoted",
-          closed: "Closed",
-        };
-        const statusMessages: Record<QuoteRequest["status"], string> = {
-          new: "Your quote request has been received and is in our queue.",
-          reviewed: "Our team is currently reviewing your quote request.",
-          quoted: "We have prepared a price quote for your request. Our team will contact you shortly.",
-          closed: "Your quote request has been closed. Thank you for your interest.",
-        };
-        sendNotificationEmail(
-          quote.email,
-          `Your Quote Request Update — Crystal Digital Art & Award House`,
-          {
-            Dear_Customer: quote.name,
-            Product: quote.product,
-            Selected_Size: quote.size || "Not specified",
-            Status: statusLabels[status],
-            Message: statusMessages[status],
-            Contact_Us: "Call +977-61-XXXXXX or visit crystaldigital.com.np",
-          }
-        );
-      }
     } catch {
     } finally {
       setUpdatingId(null);

@@ -1,12 +1,19 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Product } from "../../types/Product";
-import { PublicGalleryItem, PublicTestimonial } from "../../types/Public";
+import {
+  PublicGalleryItem,
+  PublicSettings,
+  PublicTestimonial,
+} from "../../types/Public";
+import { SITE_DEFAULTS, withSettingsDefaults } from "../../data/siteDefaults";
 import { publicApi } from "../../utils/api";
 
 type SiteContextValue = {
   products: Product[];
   gallery: PublicGalleryItem[];
   testimonials: PublicTestimonial[];
+  /** Always populated — blank fields fall back to SITE_DEFAULTS. */
+  settings: PublicSettings;
   loading: boolean;
   error: string;
 };
@@ -17,6 +24,7 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [gallery, setGallery] = useState<PublicGalleryItem[]>([]);
   const [testimonials, setTestimonials] = useState<PublicTestimonial[]>([]);
+  const [settings, setSettings] = useState<PublicSettings>(SITE_DEFAULTS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -27,12 +35,14 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
       publicApi.products<Product[]>(),
       publicApi.gallery<PublicGalleryItem[]>(),
       publicApi.testimonials<PublicTestimonial[]>(),
+      publicApi.settings<PublicSettings | null>(),
     ])
-      .then(([p, g, t]) => {
+      .then(([p, g, t, s]) => {
         if (cancelled) return;
         setProducts(p);
         setGallery(g);
         setTestimonials(t);
+        setSettings(withSettingsDefaults(s));
       })
       .catch((err) => {
         if (cancelled) return;
@@ -53,7 +63,7 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SiteContext.Provider
-      value={{ products, gallery, testimonials, loading, error }}
+      value={{ products, gallery, testimonials, settings, loading, error }}
     >
       {children}
     </SiteContext.Provider>

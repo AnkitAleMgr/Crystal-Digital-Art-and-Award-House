@@ -6,9 +6,11 @@ import { Section, SectionHeading, SectionLabel } from "../components/pages/home/
 import img6 from "../../../imports/image-6.png";
 import img7 from "../../../imports/image-7.png";
 import img8 from "../../../imports/image-8.png";
+import { useSiteData } from "../components/layout/siteDataProvider";
 
 
 export function AboutPage() {
+  const { settings } = useSiteData();
   const { ref: r1, visible: v1 } = useInView();
   return (
     <div style={{ paddingTop: "80px" }}>
@@ -196,22 +198,22 @@ export function AboutPage() {
               {
                 icon: MapPin,
                 label: "Address",
-                val: "Darbarthok Marga 1, Samsung Galli, Pokhara 33700, Nepal",
+                val: settings.address,
               },
               {
                 icon: Phone,
                 label: "Phone",
-                val: "061-523459 / 9856012712",
+                val: settings.phone,
               },
               {
                 icon: Mail,
                 label: "Email",
-                val: "globallinksks@gmail.com",
+                val: settings.email,
               },
               {
                 icon: Clock,
                 label: "Business Hours",
-                val: "Mon–Sat: 9:00 AM – 7:00 PM",
+                val: settings.workingHours,
               },
             ].map((info) => {
               const Icon = info.icon;

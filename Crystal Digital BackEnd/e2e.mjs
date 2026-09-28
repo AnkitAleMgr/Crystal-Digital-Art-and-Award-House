@@ -207,7 +207,28 @@ let quoteId = null;
   check("deleted quote is gone from the admin list", !(await call("/admin/quotes", { token })).body.data.some((q) => q.id === quoteId));
 }
 
-// 13. The rate limiter must actually bite on a single flood source.
+// 13. A mail outage must never cost a customer their quote. The send is
+//     skipped for reserved example domains (see isTestAddress in
+//     notifications.js), so this stays a no-op whether or not RESEND_API_KEY is
+//     configured — the row must still save and the API must still answer 201.
+{
+  const saved = await call("/api/quotes", asIp({
+    method: "POST",
+    body: JSON.stringify({ name: "No Mail", email: "nomail@example.com", message: "still want this saved" }),
+  }));
+  const row = (await call("/admin/quotes", { token })).body.data.find((q) => q.email === "nomail@example.com");
+  check("quote saves even when email is suppressed", saved.code === 201 && Boolean(row), `code=${saved.code}`);
+
+  const moved = await call(`/admin/quotes/${row.id}`, { method: "PUT", token, body: JSON.stringify({ status: "reviewed" }) });
+  check("status change still works when email is suppressed", moved.code === 200 && moved.body.data?.status === "reviewed", `code=${moved.code}`);
+
+  const same = await call(`/admin/quotes/${row.id}`, { method: "PUT", token, body: JSON.stringify({ status: "reviewed" }) });
+  check("re-saving the same status is still 200", same.code === 200 && same.body.data?.status === "reviewed", `code=${same.code}`);
+
+  await call(`/admin/quotes/${row.id}`, { method: "DELETE", token });
+}
+
+// 14. The rate limiter must actually bite on a single flood source.
 {
   const floodIp = `198.51.100.${Math.floor(Math.random() * 250) + 1}`;
   const post = () => call("/api/quotes", {
