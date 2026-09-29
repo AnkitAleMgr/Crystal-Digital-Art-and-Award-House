@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { ChevronLeft, LogOut, Menu, MessageSquare } from "lucide-react";
+import { ExternalLink, LogOut, Menu, MessageSquare } from "lucide-react";
 import { AdminSection, NAV_ITEMS } from "../../constants/admin";
 import { useAdmin } from "./adminProvider";
 import { Sidebar } from "./sidebar";
@@ -10,61 +10,50 @@ export function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<"logout" | "viewSite" | null>(null);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const section = sectionFromPath(location.pathname);
-
-  function handleConfirm() {
-    if (confirmAction === "logout") onLogout();
-    if (confirmAction === "viewSite") window.location.hash = "";
-    setConfirmAction(null);
-  }
 
   return (
     <div className="min-h-screen bg-gray-50" style={{ fontFamily: "Inter, sans-serif" }}>
       <style>{`.no-scrollbar::-webkit-scrollbar{display:none}`}</style>
 
-      {confirmAction && (
+      {confirmLogout && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setConfirmAction(null)} />
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setConfirmLogout(false)} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
             <div className="flex items-start gap-4 mb-6">
-              <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 ${confirmAction === "logout" ? "bg-red-100" : "bg-blue-100"}`}>
-                {confirmAction === "logout"
-                  ? <LogOut size={20} className="text-red-600" />
-                  : <ChevronLeft size={20} className="text-blue-600" />}
+              <div className="w-11 h-11 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <LogOut size={20} className="text-red-600" />
               </div>
               <div>
                 <h3 className="font-bold text-gray-800 mb-1" style={{ fontFamily: "Poppins, sans-serif" }}>
-                  {confirmAction === "logout" ? "Sign Out?" : "Leave Admin?"}
+                  Sign Out?
                 </h3>
                 <p className="text-sm text-gray-500">
-                  {confirmAction === "logout"
-                    ? "You will be returned to the login screen. Any unsaved changes will remain in your browser."
-                    : "You will be taken to the main website. You can return to admin via the footer link."}
+                  You will be returned to the login screen. Any unsaved changes will remain in your browser.
                 </p>
               </div>
             </div>
             <div className="flex gap-3 justify-end">
               <button
-                onClick={() => setConfirmAction(null)}
+                onClick={() => setConfirmLogout(false)}
                 className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={handleConfirm}
-                className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors"
-                style={{ background: confirmAction === "logout" ? "#DC2626" : "#2563EB" }}
+                onClick={onLogout}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors"
               >
-                {confirmAction === "logout" ? "Sign Out" : "Go to Site"}
+                Sign Out
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <Sidebar mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen} onLogout={() => setConfirmAction("logout")} />
+      <Sidebar mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen} onLogout={() => setConfirmLogout(true)} />
 
       <div className="lg:pl-64 min-h-screen flex flex-col">
         <header className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
@@ -87,14 +76,19 @@ export function AdminLayout() {
                   {quoteCount} new
                 </button>
               )}
-              <button
-                onClick={() => setConfirmAction("viewSite")}
-                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="View Site"
+                title="Open the website in a new tab"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
               >
-                <ChevronLeft size={14} /> View Site
-              </button>
+                <ExternalLink size={14} />
+                <span className="hidden sm:inline">View Site</span>
+              </a>
               <button
-                onClick={() => setConfirmAction("logout")}
+                onClick={() => setConfirmLogout(true)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 transition-colors"
               >
                 <LogOut size={14} />
