@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Product } from "../../../types/Product";
 import { ImageWithFallback } from "../../../../components/figma/ImageWithFallback";
 import { PublicApiError, publicApi } from "../../../utils/api";
+import { catLabel } from "../../../utils/categories";
 import { useSiteData } from "../../layout/siteDataProvider";
 
 // ── QUOTE MODAL ───────────────────────────────────────────────────────────────
@@ -218,7 +219,7 @@ export function QuoteModal({
                       border: "1px solid rgba(74,222,128,0.3)",
                     }}
                   >
-                    {product.cat}
+                    {catLabel(product.cat)}
                   </span>
                 </div>
               </div>

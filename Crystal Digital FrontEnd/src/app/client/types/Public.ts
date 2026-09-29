@@ -1,9 +1,23 @@
 export interface PublicGalleryItem {
   id: string;
   label: string;
+  /** A category *name*, or "" when the item is uncategorized. */
   cat: string;
   img: string;
   linkedProductId?: string;
+}
+
+/**
+ * One entry of the shared product/gallery category list, from
+ * GET /api/categories. Products and gallery items store the category name, so
+ * this list is what the filter pills on the home and gallery pages are built
+ * from — the admin adds and removes them at runtime.
+ */
+export interface PublicCategory {
+  id: string;
+  name: string;
+  /** Admin-controlled display order. */
+  order: number;
 }
 
 export interface PublicTestimonial {

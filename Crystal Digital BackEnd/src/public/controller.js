@@ -1,4 +1,5 @@
 import { ProductModel } from "../admin/products/model.js";
+import { CategoryModel } from "../admin/categories/model.js";
 import { GalleryModel } from "../admin/gallery/model.js";
 import { TestimonialModel } from "../admin/testimonials/model.js";
 import { SettingModel } from "../admin/settings/model.js";
@@ -36,6 +37,20 @@ const publicTestimonial = (doc) => ({
   text: doc.text,
   rating: doc.rating,
 });
+
+export const getPublicCategories = async (_req, res) => {
+  try {
+    // Same order the admin arranged them in — this list *is* the filter pills on
+    // the home and gallery pages, so the ordering is visible copy, not noise.
+    const docs = await CategoryModel.find().sort({ order: 1, name: 1 });
+    res.json({
+      status: true,
+      data: docs.map((doc) => ({ id: String(doc._id), name: doc.name, order: doc.order })),
+    });
+  } catch (error) {
+    fail(res, error);
+  }
+};
 
 export const getPublicProducts = async (req, res) => {
   try {

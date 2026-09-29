@@ -245,6 +245,108 @@ let quoteId = null;
   }
 }
 
+// ── categories ────────────────────────────────────────────────────────────────
+// Products and gallery items reference a category by NAME, so these checks cover
+// the three things that can silently orphan them: a rename that doesn't follow
+// through, a delete that doesn't strip, and a `cat` the schema still demands.
+const CAT = "E2E Test Category";
+const CAT_SLUG = "e2e-cat-widget";
+let catId = null;
+let widgetId = null;
+
+// 15. Sweep leftovers from a crashed run, so the create check is repeatable.
+{
+  const list = (await call("/admin/categories", { token })).body.data ?? [];
+  for (const c of list.filter((x) => x.name === CAT)) {
+    await call(`/admin/categories/${c.id}`, { method: "DELETE", token });
+  }
+  const products = (await call("/admin/products", { token })).body.data;
+  for (const p of products.filter((x) => x.slug === CAT_SLUG)) {
+    await call(`/admin/products/${p.id}`, { method: "DELETE", token });
+  }
+}
+
+// 16. The public list is unauthenticated; the admin CRUD is not.
+{
+  const pub = await call("/api/categories");
+  check("GET /api/categories is public", pub.code === 200 && Array.isArray(pub.body.data), `code=${pub.code}`);
+  check("public category shape is id/name/order", pub.body.data.every((c) => c.id && typeof c.name === "string" && typeof c.order === "number"), JSON.stringify(pub.body.data[0] ?? null));
+  check("GET /admin/categories requires a token", (await call("/admin/categories")).code === 401);
+}
+
+// 17. Creating a category appends it to the end of the pill order.
+{
+  const before = (await call("/api/categories")).body.data;
+  const { code, body } = await call("/admin/categories", { method: "POST", token, body: JSON.stringify({ name: CAT }) });
+  const after = (await call("/api/categories")).body.data;
+  check("POST /admin/categories creates one", code === 201 && body.data?.name === CAT, `code=${code} ${body.message ?? ""}`);
+  check("new category is appended last", after[after.length - 1]?.name === CAT, `last=${after[after.length - 1]?.name}`);
+  check("existing categories kept their order", before.every((c, i) => after[i]?.id === c.id));
+  catId = body.data?.id ?? null;
+}
+
+// 18. Duplicates are rejected case-insensitively, with a field-level message.
+{
+  const same = await call("/admin/categories", { method: "POST", token, body: JSON.stringify({ name: CAT }) });
+  check("duplicate category name is rejected", same.code === 400 && Boolean(same.body.errors?.name), `code=${same.code}`);
+  const lower = await call("/admin/categories", { method: "POST", token, body: JSON.stringify({ name: CAT.toLowerCase() }) });
+  check("duplicate detection ignores case", lower.code === 400, `code=${lower.code}`);
+  const blank = await call("/admin/categories", { method: "POST", token, body: JSON.stringify({ name: "   " }) });
+  check("blank category name is rejected", blank.code === 400 && Boolean(blank.body.errors?.name), `code=${blank.code}`);
+  check("duplicate attempts did not create a second row", (await call("/api/categories")).body.data.filter((c) => c.name === CAT).length === 1);
+}
+
+// 19. A rename must follow through to the products and gallery items using it.
+{
+  const { code } = await call(`/admin/categories/${catId}`, { method: "PUT", token, body: JSON.stringify({ name: `${CAT} Renamed` }) });
+  const doc = (await call("/api/categories")).body.data.find((c) => c.name === `${CAT} Renamed`);
+  check("PUT /admin/categories renames", code === 200 && Boolean(doc), `code=${code}`);
+
+  const made = await call("/admin/products", { method: "POST", token, body: JSON.stringify({ slug: CAT_SLUG, name: "E2E Category Widget", desc: "created by the e2e check", cat: `${CAT} Renamed` }) });
+  check("a product can be filed under a new category", made.code === 201, `code=${made.code} ${made.body.message ?? ""}`);
+  widgetId = made.body.data?.id ?? null;
+
+  const renamed = await call(`/admin/categories/${catId}`, { method: "PUT", token, body: JSON.stringify({ name: CAT }) });
+  const product = (await call("/admin/products", { token })).body.data.find((p) => p.slug === CAT_SLUG);
+  check("rename followed through to the product's cat", renamed.code === 200 && product?.cat === CAT, `cat=${product?.cat}`);
+  check("renamed category is back in the public list", (await call("/api/categories")).body.data.some((c) => c.id === catId && c.name === CAT));
+}
+
+// 20. Deleting a category strips it from the products using it — it must not
+//     delete them, and the product must survive without a category at all.
+{
+  const { code, body } = await call(`/admin/categories/${catId}`, { method: "DELETE", token });
+  check("DELETE /admin/categories removes it", code === 200, `code=${code}`);
+  check("DELETE returns no data key", !("data" in body));
+  check("category is gone from the public list", !(await call("/api/categories")).body.data.some((c) => c.id === catId));
+
+  const product = (await call("/admin/products", { token })).body.data.find((p) => p.slug === CAT_SLUG);
+  check("the product survived its category", Boolean(product), "product was deleted");
+  check("the product's cat was cleared, not dropped", product?.cat === "", `cat=${JSON.stringify(product?.cat)}`);
+  check("the product is still published (has a slug)", (await call("/api/products")).body.data.some((p) => p.id === CAT_SLUG));
+}
+
+// 21. `cat` is optional now, so an uncategorized product is a first-class thing
+//     rather than a validation error.
+{
+  const { code, body } = await call("/admin/products", { method: "POST", token, body: JSON.stringify({ slug: "e2e-no-cat", name: "E2E No Category", desc: "created by the e2e check" }) });
+  check("a product can be created with no category", code === 201 && body.data?.cat === "", `code=${code} ${body.message ?? ""}`);
+  await call(`/admin/products/${body.data?.id}`, { method: "DELETE", token });
+}
+
+// 22. A non-ObjectId id must 404 rather than leak a CastError.
+{
+  check("PUT /admin/categories/:id with junk id is 404", (await call("/admin/categories/not-an-id", { method: "PUT", token, body: JSON.stringify({ name: "x" }) })).code === 404);
+  check("DELETE /admin/categories/:id with junk id is 404", (await call("/admin/categories/not-an-id", { method: "DELETE", token })).code === 404);
+}
+
+// 23. Cleanup, so a re-run starts from the same state.
+{
+  await call(`/admin/products/${widgetId}`, { method: "DELETE", token });
+  const left = (await call("/admin/products", { token })).body.data.filter((p) => p.slug === CAT_SLUG || p.slug === "e2e-no-cat");
+  check("e2e category fixtures cleaned up", left.length === 0, `left ${left.map((p) => p.slug).join(", ")}`);
+}
+
 console.log("");
 pass.forEach((l) => console.log(l));
 fail.forEach((l) => console.log(l));

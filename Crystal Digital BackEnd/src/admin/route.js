@@ -1,6 +1,7 @@
 import { adminLogin, adminRegister, getMe } from "./auth/controller.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { ProductRoute } from "./products/route.js";
+import { CategoryRoute } from "./categories/route.js";
 import { QuoteRoute } from "./quotes/route.js";
 import { GalleryRoute } from "./gallery/route.js";
 import { TestimonialRoute } from "./testimonials/route.js";
@@ -21,6 +22,7 @@ AdminRoute.use(authMiddleware);
 AdminRoute.get("/me", getMe);
 AdminRoute.use("/upload", UploadRoute);
 AdminRoute.use("/products", ProductRoute);
+AdminRoute.use("/categories", CategoryRoute);
 AdminRoute.use("/quotes", QuoteRoute);
 AdminRoute.use("/gallery", GalleryRoute);
 AdminRoute.use("/testimonials", TestimonialRoute);

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Product } from "../../types/Product";
 import {
+  PublicCategory,
   PublicGalleryItem,
   PublicSettings,
   PublicTestimonial,
@@ -10,6 +11,12 @@ import { publicApi } from "../../utils/api";
 
 type SiteContextValue = {
   products: Product[];
+  /**
+   * The shared product/gallery category list, admin-managed. Every filter pill
+   * on the site is derived from this, so it is the one place a new category has
+   * to reach to show up.
+   */
+  categories: PublicCategory[];
   gallery: PublicGalleryItem[];
   testimonials: PublicTestimonial[];
   /** Always populated — blank fields fall back to SITE_DEFAULTS. */
@@ -22,6 +29,7 @@ const SiteContext = createContext<SiteContextValue | undefined>(undefined);
 
 export function SiteDataProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<PublicCategory[]>([]);
   const [gallery, setGallery] = useState<PublicGalleryItem[]>([]);
   const [testimonials, setTestimonials] = useState<PublicTestimonial[]>([]);
   const [settings, setSettings] = useState<PublicSettings>(SITE_DEFAULTS);
@@ -33,13 +41,15 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
 
     Promise.all([
       publicApi.products<Product[]>(),
+      publicApi.categories<PublicCategory[]>(),
       publicApi.gallery<PublicGalleryItem[]>(),
       publicApi.testimonials<PublicTestimonial[]>(),
       publicApi.settings<PublicSettings | null>(),
     ])
-      .then(([p, g, t, s]) => {
+      .then(([p, c, g, t, s]) => {
         if (cancelled) return;
         setProducts(p);
+        setCategories(c);
         setGallery(g);
         setTestimonials(t);
         setSettings(withSettingsDefaults(s));
@@ -63,7 +73,15 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SiteContext.Provider
-      value={{ products, gallery, testimonials, settings, loading, error }}
+      value={{
+        products,
+        categories,
+        gallery,
+        testimonials,
+        settings,
+        loading,
+        error,
+      }}
     >
       {children}
     </SiteContext.Provider>

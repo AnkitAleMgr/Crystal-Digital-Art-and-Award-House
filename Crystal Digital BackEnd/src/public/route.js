@@ -4,6 +4,7 @@ import {
   getPublicGallery,
   getPublicTestimonials,
   getPublicSettings,
+  getPublicCategories,
   createPublicQuote,
 } from "./controller.js";
 import { quoteRateLimit } from "../middleware/quoteRateLimit.js";
@@ -11,6 +12,7 @@ import { quoteRateLimit } from "../middleware/quoteRateLimit.js";
 export const PublicRoute = express.Router();
 
 PublicRoute.get("/products", getPublicProducts);
+PublicRoute.get("/categories", getPublicCategories);
 PublicRoute.get("/gallery", getPublicGallery);
 PublicRoute.get("/testimonials", getPublicTestimonials);
 PublicRoute.get("/settings", getPublicSettings);

@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useSiteData } from "../components/layout/siteDataProvider";
 import { cdn } from "../utils/api";
+import { catLabel } from "../utils/categories";
 import { useInView } from "../../client/hooks/useInView";
 import { QuoteModal } from "../../client/components/pages/Product/productQuoteModal";
 import { useState } from "react";
@@ -118,7 +119,7 @@ export function ProductDetailPage() {
                     border: "1px solid rgba(34,197,94,0.3)",
                   }}
                 >
-                  {product.cat}
+                  {catLabel(product.cat)}
                 </span>
                 {product.tags.map((tag) => (
                   <span

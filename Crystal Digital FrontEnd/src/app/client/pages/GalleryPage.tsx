@@ -3,29 +3,30 @@ import { useNavigate } from "react-router-dom";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { useSiteData } from "../components/layout/siteDataProvider";
 import { cdn } from "../utils/api";
+import {
+  ALL_FILTER,
+  catLabel,
+  categoryFilters,
+  inCategory,
+} from "../utils/categories";
 import { PublicGalleryItem } from "../types/Public";
 import { Section } from "../components/pages/home/homeSection";
 import { X } from "lucide-react";
 
-const cats = [
-  "All",
-  "Crystal Awards",
-  "Trophies",
-  "Plaques",
-  "Medals",
-  "Collection",
-];
-
-
 export function GalleryPage() {
   const navigate = useNavigate();
-  const [filter, setFilter] = useState("All");
+  const [filter, setFilter] = useState(ALL_FILTER);
   const [lightbox, setLightbox] = useState<PublicGalleryItem | null>(null);
-  const { gallery: galleryItems, products, loading } = useSiteData();
-  const filtered =
-    filter === "All"
-      ? galleryItems
-      : galleryItems.filter((i) => i.cat === filter);
+  const { gallery: galleryItems, categories, products, loading } = useSiteData();
+
+  // Same shared category list as the home page — the admin manages one list for
+  // products and gallery items, and this page used to keep a third hardcoded
+  // copy of it that had already drifted from the admin's.
+  const cats = categoryFilters(
+    categories,
+    galleryItems.filter((i) => !i.cat).length
+  );
+  const filtered = galleryItems.filter((i) => inCategory(i.cat, filter));
 
   // The banner previously used a hardcoded local import; it now comes from the
   // collection image in the database so it stays in sync with the admin.
@@ -126,7 +127,7 @@ export function GalleryPage() {
                   className="tag-pill text-xs font-bold tracking-wide mb-1"
                   style={{ color: "#D4AF37" }}
                 >
-                  {item.cat}
+                  {catLabel(item.cat)}
                 </span>
                 <span className="card-title text-sm font-semibold text-white">
                   {item.label}
@@ -158,7 +159,7 @@ export function GalleryPage() {
             />
             <div className="p-5 bg-white">
               <div className="text-xs text-blue-600 font-bold uppercase tracking-wider mb-1">
-                {lightbox.cat}
+                {catLabel(lightbox.cat)}
               </div>
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div

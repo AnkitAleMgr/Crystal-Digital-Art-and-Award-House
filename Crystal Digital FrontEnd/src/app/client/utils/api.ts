@@ -74,6 +74,7 @@ const post = <T>(path: string, body: unknown) =>
 
 export const publicApi = {
   products: <T>() => get<T>("/products"),
+  categories: <T>() => get<T>("/categories"),
   gallery: <T>() => get<T>("/gallery"),
   testimonials: <T>() => get<T>("/testimonials"),
   settings: <T>() => get<T>("/settings"),

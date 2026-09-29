@@ -7,8 +7,10 @@ import { dirname, resolve } from "path";
 import { ProductModel } from "./src/admin/products/model.js";
 import { GalleryModel } from "./src/admin/gallery/model.js";
 import { TestimonialModel } from "./src/admin/testimonials/model.js";
+import { CategoryModel } from "./src/admin/categories/model.js";
 import { deleteImage } from "./src/claudinery/claudineryService.js";
 import { SEED_PRODUCTS, SEED_GALLERY, SEED_TESTIMONIALS } from "./src/seed/data.mjs";
+import { SEED_CATEGORIES, upsertCategories } from "./src/seed/categories.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const IMPORTS = resolve(HERE, "../Crystal Digital FrontEnd/src/imports");
@@ -106,7 +108,16 @@ for (const [i, t] of SEED_TESTIMONIALS.entries()) {
   console.log(`  testimonial ${i + 1}/${SEED_TESTIMONIALS.length}  ${t.name}`);
 }
 
+// Categories are a separate collection but products/gallery rows reference them
+// by name, so a fresh seed needs them to exist. upsertCategories only inserts
+// missing names, which is why running it here cannot clobber a list the admin
+// has since edited by hand — and why `npm run seed:categories` stays safe too.
+const { added: addedCats } = await upsertCategories();
 console.log(
-  `\nDone. products=${await ProductModel.countDocuments()} gallery=${await GalleryModel.countDocuments()} testimonials=${await TestimonialModel.countDocuments()}`
+  `  categories ${SEED_CATEGORIES.length} total${addedCats.length ? ` (${addedCats.length} added)` : " (already present)"}`
+);
+
+console.log(
+  `\nDone. products=${await ProductModel.countDocuments()} gallery=${await GalleryModel.countDocuments()} testimonials=${await TestimonialModel.countDocuments()} categories=${await CategoryModel.countDocuments()}`
 );
 await mongoose.disconnect();

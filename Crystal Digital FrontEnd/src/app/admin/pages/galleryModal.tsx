@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { GalleryItem } from "../types/interface/gallery/gakkeryItem";
 import { AdminProduct } from "../types/interface/production/adminProduct";
+import { CategorySelect } from "../components/ui/categorySelect";
 import { ConfirmModal } from "../components/ui/confirmModal";
 import { ImageUploadField } from "../components/ui/imageUploadField";
 import { Input } from "../components/ui/input";
 import { Modal } from "../components/ui/modal";
-import { Select } from "../components/ui/select";
-import { GALLERY_CATS } from "../constants/admin";
 import { useAdmin } from "../components/layout/adminProvider";
 import { Image, Pencil, Plus, Search, Trash2, AlertCircle } from "lucide-react";
 
@@ -24,16 +23,17 @@ function GalleryModal({
   const [form, setForm] = useState<Omit<GalleryItem, "id">>(
     initial
       ? { label: initial.label, cat: initial.cat, imgUrl: initial.imgUrl, imgPublicId: initial.imgPublicId, linkedProductId: initial.linkedProductId }
-      : { label: "", cat: "Crystal Awards", imgUrl: "", imgPublicId: "", linkedProductId: undefined }
+      : { label: "", cat: "", imgUrl: "", imgPublicId: "", linkedProductId: undefined }
   );
 
   return (
     <Modal title={initial ? "Edit Gallery Item" : "Add Gallery Item"} onClose={onClose}>
       <div className="space-y-4">
         <Input label="Title / Label *" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="e.g. Gold Trophy Display" required />
-        <Select label="Category *" value={form.cat} onChange={(e) => setForm({ ...form, cat: e.target.value })}>
-          {GALLERY_CATS.map((c) => <option key={c}>{c}</option>)}
-        </Select>
+        {/* The same shared category list as products — gallery-only images can
+            carry a category of their own (e.g. "Printing"), which is why this
+            was a second hardcoded list. */}
+        <CategorySelect label="Category" value={form.cat} onChange={(cat) => setForm({ ...form, cat })} />
         <ImageUploadField label="Gallery Image" folder="gallery" value={form.imgUrl} onChange={(url, publicId) => setForm({ ...form, imgUrl: url, imgPublicId: publicId ?? "" })} />
 
         {/* Product link */}
@@ -54,7 +54,7 @@ function GalleryModal({
             <option value="">None — store / staff / event image</option>
             {products.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name} ({p.cat})
+                {p.name} ({p.cat || "Uncategorized"})
               </option>
             ))}
           </select>
@@ -84,16 +84,24 @@ function GalleryModal({
 }
 
 export function AdminGallery() {
-  const { gallery, createGalleryItem, updateGalleryItem, deleteGalleryItem, products, error, clearError } = useAdmin();
+  const { gallery, categories, createGalleryItem, updateGalleryItem, deleteGalleryItem, products, error, clearError } = useAdmin();
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<GalleryItem | null>(null);
   const [deleting, setDeleting] = useState<GalleryItem | null>(null);
   const [catFilter, setCatFilter] = useState("All");
   const [search, setSearch] = useState("");
 
-  const filtered = gallery.filter((g) =>
-    (catFilter === "All" || g.cat === catFilter) &&
-    g.label.toLowerCase().includes(search.toLowerCase())
+  const filters = [
+    "All",
+    ...categories.map((c) => c.name),
+    ...(gallery.some((g) => !g.cat) ? ["Uncategorized"] : []),
+  ];
+
+  const filtered = gallery.filter(
+    (g) =>
+      (catFilter === "All" ||
+        (catFilter === "Uncategorized" ? !g.cat : g.cat === catFilter)) &&
+      g.label.toLowerCase().includes(search.toLowerCase())
   );
 
   async function handleSave(data: Omit<GalleryItem, "id">) {
@@ -148,8 +156,11 @@ export function AdminGallery() {
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search gallery..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 bg-white" />
         </div>
         <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 bg-white">
-          <option value="All">All Categories</option>
-          {GALLERY_CATS.map((c) => <option key={c}>{c}</option>)}
+          {filters.map((c) => (
+            <option key={c} value={c}>
+              {c === "All" ? "All Categories" : c}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -176,7 +187,7 @@ export function AdminGallery() {
             <div className="p-4">
               <div className="font-semibold text-gray-800 text-sm mb-2">{item.label}</div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-green-50 text-green-700">{item.cat}</span>
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-green-50 text-green-700">{item.cat || "Uncategorized"}</span>
                 {item.linkedProductId ? (
                   <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 flex items-center gap-1">
                     🔗 {products.find((p) => p.id === item.linkedProductId)?.name || "Product"}

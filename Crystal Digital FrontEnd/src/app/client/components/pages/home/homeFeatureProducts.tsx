@@ -1,34 +1,32 @@
 import { useNavigate } from "react-router-dom";
 import { useSiteData } from "../../layout/siteDataProvider";
 import { cdn } from "../../../utils/api";
+import {
+  ALL_FILTER,
+  catLabel,
+  categoryFilters,
+  inCategory,
+} from "../../../utils/categories";
 import { useInView } from "../../../hooks/useInView";
 import { useState } from "react";
 import { ImageWithFallback } from "../../../../components/figma/ImageWithFallback";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 // ── FEATURED PRODUCTS ─────────────────────────────────────────────────────────
-export const PRODUCT_FILTER_CATS = [
-  "All",
-  "Crystal",
-  "Trophies",
-  "Plaques",
-  "Medals",
-  "Collection",
-];
-
 const PAGE_SIZE = 6;
 
 export function FeaturedProducts() {
   const navigate = useNavigate();
   const { ref, visible } = useInView();
-  const { products: PRODUCTS, loading } = useSiteData();
-  const [activeFilter, setActiveFilter] = useState("All");
+  const { products: PRODUCTS, categories, loading } = useSiteData();
+  const [activeFilter, setActiveFilter] = useState(ALL_FILTER);
   const [page, setPage] = useState(1);
 
-  const filtered =
-    activeFilter === "All"
-      ? PRODUCTS
-      : PRODUCTS.filter((p) => p.cat === activeFilter);
+  const filters = categoryFilters(
+    categories,
+    PRODUCTS.filter((p) => !p.cat).length
+  );
+  const filtered = PRODUCTS.filter((p) => inCategory(p.cat, activeFilter));
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const pageProducts = filtered.slice(
@@ -47,9 +45,9 @@ export function FeaturedProducts() {
 
   return (
     <div ref={ref}>
-      {/* Filter pills */}
+      {/* Filter pills — from the admin-managed category list */}
       <div className="flex flex-wrap gap-2 justify-center mb-10">
-        {PRODUCT_FILTER_CATS.map((cat) => {
+        {filters.map((cat) => {
           const active = activeFilter === cat;
           return (
             <button
@@ -114,7 +112,7 @@ export function FeaturedProducts() {
                   color: "#fff",
                 }}
               >
-                {p.cat}
+                {catLabel(p.cat)}
               </span>
               {p.tags[0] && (
                 <span

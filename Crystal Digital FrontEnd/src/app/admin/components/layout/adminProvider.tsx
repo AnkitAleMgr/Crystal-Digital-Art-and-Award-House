@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { AdminProduct } from "../../types/interface/production/adminProduct";
+import { AdminCategory } from "../../types/interface/category/category";
 import { GalleryItem } from "../../types/interface/gallery/gakkeryItem";
 import { Testimonial } from "../../types/interface/testimonials/testimonials";
 import { QuoteRequest } from "../../types/interface/quoteRequest/quoteRequest";
@@ -18,6 +19,14 @@ type AdminContextValue = {
   createProduct: (data: Omit<AdminProduct, "id">) => Promise<AdminProduct>;
   updateProduct: (id: string, data: Omit<AdminProduct, "id">) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
+  /**
+   * The shared product/gallery category list. It drives the Category selects
+   * here and, through GET /api/categories, the filter pills on the public site.
+   */
+  categories: AdminCategory[];
+  createCategory: (name: string) => Promise<AdminCategory>;
+  renameCategory: (id: string, name: string) => Promise<void>;
+  deleteCategory: (id: string, name: string) => Promise<void>;
   gallery: GalleryItem[];
   createGalleryItem: (data: Omit<GalleryItem, "id">) => Promise<GalleryItem>;
   updateGalleryItem: (id: string, data: Omit<GalleryItem, "id">) => Promise<void>;
@@ -42,6 +51,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     () => sessionStorage.getItem("cdaah_admin") === "1"
   );
   const [products, setProducts] = useState<AdminProduct[]>([]);
+  const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
@@ -85,14 +95,16 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
     Promise.all([
       api.getAll<AdminProduct>("products"),
+      api.getAll<AdminCategory>("categories"),
       api.getAll<GalleryItem>("gallery"),
       api.getAll<Testimonial>("testimonials"),
       api.getAll<QuoteRequest>("quotes"),
       api.getSettings<SiteSettings>(),
     ])
-      .then(([p, g, t, q, s]) => {
+      .then(([p, c, g, t, q, s]) => {
         if (cancelled) return;
         setProducts(p);
+        setCategories(c);
         setGallery(g);
         setTestimonials(t);
         setQuotes(q);
@@ -127,6 +139,47 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const deleteProduct = async (id: string) => {
     await run(() => api.remove("products", id));
     setProducts((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const createCategory = (name: string) =>
+    run(() => api.create<AdminCategory>("categories", { name })).then((created) => {
+      // Appended locally rather than re-sorted: the API already returns the
+      // display order and a new category lands last in it.
+      setCategories((prev) => [...prev, created]);
+      return created;
+    });
+
+  // Products and gallery items hold the category *name*, so renaming one has to
+  // be mirrored here or the tables would keep showing a category that no longer
+  // exists until the next reload. The backend does the same rewrite server-side.
+  const renameCategory = async (id: string, name: string) => {
+    const updated = await run(() =>
+      api.update<AdminCategory>("categories", id, { name })
+    );
+    const previous = categories.find((c) => c.id === id)?.name;
+    setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
+    if (previous && previous !== updated.name) {
+      setProducts((prev) =>
+        prev.map((p) => (p.cat === previous ? { ...p, cat: updated.name } : p))
+      );
+      setGallery((prev) =>
+        prev.map((g) => (g.cat === previous ? { ...g, cat: updated.name } : g))
+      );
+    }
+  };
+
+  // Deleting a category does not delete what used it: the server clears `cat`,
+  // which the admin tables and the site both show as "Uncategorized". The name
+  // is passed alongside the id because that is what the docs were storing.
+  const deleteCategory = async (id: string, name: string) => {
+    await run(() => api.remove("categories", id));
+    setCategories((prev) => prev.filter((c) => c.id !== id));
+    setProducts((prev) =>
+      prev.map((p) => (p.cat === name ? { ...p, cat: "" } : p))
+    );
+    setGallery((prev) =>
+      prev.map((g) => (g.cat === name ? { ...g, cat: "" } : g))
+    );
   };
 
   const createGalleryItem = (data: Omit<GalleryItem, "id">) =>
@@ -196,6 +249,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         createProduct,
         updateProduct,
         deleteProduct,
+        categories,
+        createCategory,
+        renameCategory,
+        deleteCategory,
         gallery,
         createGalleryItem,
         updateGalleryItem,

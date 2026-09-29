@@ -31,6 +31,20 @@ contract only. Useful when touching `ContactPage`, `productQuoteModal`, or the a
 drive the form, assert on `page.on("response")` for the POST, and remember to delete the
 `@example.com` rows the submissions create.
 
+Three traps when scripting the **admin** pages, all of which cost a run each:
+- **The admin pages have their own category `<select>` (the table filter) and it comes
+  before the modal's in the DOM.** A bare `page.selectOption("select", …)` or
+  `page.$eval("select", …)` therefore operates on the *filter*, not the modal field, and
+  fails silently — a subsequent `getByRole(...)` then just times out. Scope to the modal:
+  `page.locator('div.fixed.z-50:has(h2:text-is("Add New Product"))')`. `Modal` has no
+  `role="dialog"`, so the `h2` is the only handle on it.
+- **A leftover modal blocks the page under it.** The overlay is `fixed inset-0`, so the
+  "Add Product" button behind it is not clickable. Close the previous modal (its `h2`'s
+  parent holds the close button) before opening the next.
+- **A crashed run leaves its fixtures behind** and the next run's assertions are then
+  wrong (two categories of the same name, a product that should have been deleted). Sweep
+  at the top of the script, exactly as `e2e.mjs` sweeps `@example.com` quotes.
+
 ## Backend
 
 Express + MongoDB API in `Crystal Digital BackEnd/` (run with `npm run dev` inside that folder, default port 3000). Used by the frontend for admin login.
@@ -41,8 +55,9 @@ Crystal Digital BackEnd/
 ├── migrate.mjs                  ← one-shot seed: reads src/seed/data.mjs, uploads images, inserts rows (npm run seed)
 ├── dumpSeed.mjs                 ← regenerates src/seed/data.mjs from the current DB (npm run seed:dump)
 ├── seedSettings.mjs             ← fills the single settings doc from src/seed/settings.mjs (npm run seed:settings)
+├── seedCategories.mjs           ← inserts any missing category names from src/seed/categories.mjs (npm run seed:categories)
 ├── e2e.mjs                      ← live admin→public contract checks (npm run e2e)
-├── state.mjs                    ← DB row counts + Cloudinary orphan/dangling audit (npm run state)
+├── state.mjs                    ← DB row counts + category audit + Cloudinary orphan/dangling audit (npm run state)
 ├── src/
 │   ├── utils/
 │   │   ├── db.js                ← DB_CONNECT (MONGO_DB_URI)
@@ -51,9 +66,10 @@ Crystal Digital BackEnd/
 │   │   └── claudineryService.js ← Cloudinary wrapper (note: folder name typo is intentional/kept): uploadImage/deleteImage/deliveryUrl/isConfigured
 │   ├── mailer.js                ← Resend transport: sendMail({to,subject,html,replyTo,text}), isMailConfigured, mailFrom (MAIL_FROM → onboarding@resend.dev), ownerEmail. Never throws.
 │   ├── notifications.js         ← the only two emails: notifyOwnerOfQuote (after createPublicQuote saves) and notifyCustomerOfStatus (quote status actually changed). Both take a DB doc, never req.body.
-│   ├── public/{controller,route}.js  ← unauthenticated GET /api/products|gallery|testimonials|settings + POST /api/quotes
+│   ├── public/{controller,route}.js  ← unauthenticated GET /api/products|categories|gallery|testimonials|settings + POST /api/quotes
 │   ├── seed/data.mjs             ← canonical seed content (generated; see "Content migration")
 │   ├── seed/settings.mjs         ← canonical business details (hand-written, see "Settings-driven copy")
+│   ├── seed/categories.mjs       ← SEED_CATEGORIES + the shared `upsertCategories()` insert-only helper (hand-written; see "Categories")
 │   ├── middleware/
 │   │   ├── authMiddleware.js    ← JWT gate: verifies Bearer token, loads admin, sets req.admin
 │   │   └── quoteRateLimit.js    ← 10 POSTs/IP/hour sliding window for POST /api/quotes (no dependency)
@@ -64,6 +80,7 @@ Crystal Digital BackEnd/
 │       │   └── controller.js    ← adminRegister, adminLogin, getMe
 │       ├── upload/{controller,route}.js  ← POST /admin/upload — multer memory storage → Cloudinary, returns { url, publicId }
 │       ├── products/{model,controller,route}.js   ← CRUD for products (frontend AdminProduct shape)
+│       ├── categories/{model,controller,route}.js ← CRUD for the shared product/gallery category list
 │       ├── quotes/{model,controller,route}.js     ← CRUD for quote requests (status enum new/reviewed/quoted/closed)
 │       ├── gallery/{model,controller,route}.js    ← CRUD for gallery items
 │       ├── testimonials/{model,controller,route}.js ← CRUD for testimonials
@@ -96,6 +113,7 @@ Crystal Digital BackEnd/
 The public site reads content from MongoDB over **unauthenticated** routes mounted in `index.js` **before** `AdminRoute.use(authMiddleware)`, so they do not shadow the admin CRUD:
 ```
 GET /api/products     → products that HAVE a slug, ascending createdAt
+GET /api/categories   → every category, in the admin's display order
 GET /api/gallery      → all gallery items
 GET /api/testimonials → all testimonials
 GET /api/settings     → the single settings doc
@@ -105,6 +123,19 @@ POST /api/quotes      → submit a quote/contact request (rate limited)
 - `src/public/controller.js` maps documents into the shapes the public components expect. The important part: **`id` is the product `slug`, not the Mongo `_id`**, so `/products/:slug` URLs and `gallery.linkedProductId` are both slug-based. This is why public products are filtered to `slug != ""` — a product without a slug has no public URL and is deliberately invisible (the "test product 1" row is in this state).
 - The public response deliberately **omits `imgPublicId`** — that is the value the backend uses to destroy the Cloudinary asset and has no business being public.
 - `getPublicSettings` runs the shared `mapDoc` like every other route, so settings return `id` — this one used to hand back `doc.toObject()` verbatim (`_id` + `__v`). Settings are the only resource whose public shape is identical to its admin shape.
+
+### Categories (products and gallery share ONE admin-managed list)
+- **This replaced three hardcoded frontend arrays that had already drifted apart:** `PRODUCT_CATS` + `GALLERY_CATS` in `admin/constants/admin.tsx`, and a third `cats` array inside `GalleryPage.tsx`. The symptom: "Gifts" was offered in the admin's product select but had no pill on the home page, and gallery had categories ("Crystal Awards", "Printing") products could never use. **There is no longer a list in the frontend to keep in sync** — the pills and the selects both read the `categories` collection.
+- **Products and gallery items share one list on purpose.** Products are also shown in the gallery (via `linkedProductId`), and gallery-only images carry a category of their own, so two lists would guarantee drift.
+- **`cat` stores the category *name*, not a reference to the category document.** This is the load-bearing decision — do not "improve" it into a `categoryId` ObjectId ref. As a name it means a rename is a single `updateMany` instead of rewriting every product, and a delete cannot leave dangling ObjectIds behind. It is also why the schema can no longer require it.
+- **Deleting a category clears `cat` on the products and gallery items that used it; it never deletes them.** A category is a label, not a container. The UI calls this "Uncategorized" and the site's filter pills gain an **Uncategorized** tab, but only when something is actually uncategorized (`categoryFilters()` takes the count).
+- **Renaming must follow through**, and it has to be done in *two* places: the controller rewrites `ProductModel`/`GalleryModel` server-side, and `adminProvider.renameCategory` mirrors it into its own `products`/`gallery` state. Missing the second means the admin tables keep showing a category that no longer exists until the next reload.
+- **`ProductModel.cat` is no longer `required`** (`{ type: String, default: "" }`). Gallery's `cat` already was. An uncategorized product is a first-class state, so do not add `required` back.
+- **`createCategory` appends with `countDocuments()`** and the list is read back sorted `{ order: 1, name: 1 }` — that order *is* the pill order on the site, so it is visible copy, not a nicety. There is no drag-to-reorder UI; `order` is only set by creation and by the seeder.
+- **Duplicate names are rejected case-insensitively** by an explicit `takenByOther()` regex check in the controller, which returns a field-level `{ errors: { name } }`. The schema's `unique: true` would also catch it, but surfaces as a raw E11000 → 500, and the admin needs a message it can render next to the field.
+- **`cat` values that are not in the list are a real state** (hand-typed, or renamed outside the admin). `CategorySelect` keeps such a value selectable as `"<name> (not in list)"` so saving the form cannot silently drop it, and `npm run state` reports them as "cats with no category row (invisible on the site)" — such an item is only reachable via the "All" pill.
+- **Frontend:** `client/utils/categories.ts` holds the shared pill logic — `categoryFilters(categories, uncategorisedCount)`, `inCategory(cat, filter)`, `catLabel(cat)` — so the home and gallery pages cannot drift apart again. The admin field is `admin/components/ui/categorySelect.tsx` (`CategorySelect`), which pulls its list and its mutators from `useAdmin()` and manages create/rename/delete **inline in the product modal** (no sidebar page, by choice). Its delete confirmation is inline, not a `ConfirmModal`, because that is a `fixed inset-0` overlay and stacking it inside the product modal's own overlay is asking for trouble.
+- **Seeding is insert-only.** `npm run seed:categories` adds any name in `SEED_CATEGORIES` that is missing and never removes, renames or reorders anything, so it is safe against a hand-edited list (`-- --force` wipes the collection but still leaves products' `cat` strings alone). `migrate.mjs` calls the same `upsertCategories()` helper, so a fresh `npm run seed` gets the categories its products reference.
 
 ### Settings-driven copy (phone/address/email/hours are now in the DB)
 - The business details used to be hardcoded in `Footer.tsx`, `ContactPage.tsx`, `AboutPage.tsx` **and the quote modal's phone chip** (`productQuoteModal.tsx`), so **editing Admin → Settings changed nothing on the website**. They are now in the settings document and read via `GET /api/settings`.
@@ -147,7 +178,7 @@ Verified with a browser `Accept: image/webp` header: the first returns `image/we
 - `npm run seed` is **guarded**: it refuses to run when any product already has a slug, so it can never silently double-seed. `npm run seed -- --force` wipes and reseeds, and it destroys the Cloudinary assets of the rows it removes (otherwise every reseed would orphan ~19 assets, because Cloudinary suffixes colliding filenames).
 - Each seeded doc keeps a `sourceImage` field (e.g. `image-2.png`) so a re-upload can find the right local file. It is stripped before insert.
 - `npm run seed:dump` regenerates `data.mjs` **from the current database**, which is how `sourceImage` was recovered: the Cloudinary publicId already ends in the original filename (`crystal-digital/products/image-2.png`). Re-run it after editing content in the admin if you want the seed file to reflect reality.
-- `npm run state` prints DB row counts plus a Cloudinary orphan/dangling audit — the fastest way to confirm an upload/delete cycle left nothing behind. `npm run e2e` exercises the admin→public product path *and* the public quote path (create without a slug is rejected, create/update/delete, public visibility, partial update not clobbering other fields, quote submission, `status`/`createdAt` injection ignored, honeypot swallowed but not stored, `GET /api/quotes` still 404, rate limit bites). **35 checks, all green** (three of them cover mail: a quote still saves and a status change still succeeds with the send suppressed, and re-saving the same status stays 200). Two harness details worth preserving: the `call()` helper parses defensively because Express's own 404 is an HTML page, and each run sends a random `X-Forwarded-For` so the per-IP quote limiter can't make a second run inside the hour fail with 429. A crashed run leaks rows, so the suite first sweeps any `@example.com` quote left behind by a previous attempt.
+- `npm run state` prints DB row counts, a category audit (how many rows are uncategorised, and any `cat` with no matching category row) plus a Cloudinary orphan/dangling audit — the fastest way to confirm an upload/delete cycle left nothing behind. `npm run e2e` exercises the admin→public product path, the category path *and* the public quote path (create without a slug is rejected, create/update/delete, public visibility, partial update not clobbering other fields, quote submission, `status`/`createdAt` injection ignored, honeypot swallowed but not stored, `GET /api/quotes` still 404, rate limit bites; categories: public read, admin CRUD, append-order preserved, duplicate/blank names rejected case-insensitively, rename following through to products, delete stripping `cat` instead of deleting the product, and a product created with no category at all). **59 checks, all green** (three of them cover mail: a quote still saves and a status change still succeeds with the send suppressed, and re-saving the same status stays 200). Two harness details worth preserving: the `call()` helper parses defensively because Express's own 404 is an HTML page, and each run sends a random `X-Forwarded-For` so the per-IP quote limiter can't make a second run inside the hour fail with 429. A crashed run leaks rows, so the suite first sweeps any `@example.com` quote left behind by a previous attempt.
 
 ### Auth security rules (do not regress these)
 - **`POST /admin/register` is secret-gated.** It requires a `secret` body field matching `ADMIN_REGISTER_SECRET`, compared with `crypto.timingSafeEqual` (length-checked first). Without it, anyone could self-register an admin and get full write access to every CRUD route. If `ADMIN_REGISTER_SECRET` is unset the endpoint returns **503 and refuses to register** — it never falls back to open access.
@@ -169,11 +200,11 @@ Verified with a browser `Accept: image/webp` header: the first returns `image/we
   - `ContactPage.tsx` — contact/quote form (posts a WhatsApp-style message)
   - `ProductDetailPage.tsx` — single product view (size select + QuoteModal)
 - `src/app/admin/` — **admin dashboard, fully split** out of the former monolithic `AdminApp.tsx`. Layout mirrors the client refactor pattern (types/ data/ constants/ hooks/ components/{ui,layout} pages/). Current structure:
-  - `types/interface/<area>/` — TypeScript interfaces (product, quote, gallery, testimonial, setting: `adminProduct.ts` (has a required `slug`), `quoteRequest.ts`, `gakkeryItem.ts`, `testimonials.ts`, `siteSetting.ts`)
+  - `types/interface/<area>/` — TypeScript interfaces (product, quote, gallery, testimonial, setting, category: `adminProduct.ts` (has a required `slug`), `quoteRequest.ts`, `gakkeryItem.ts`, `testimonials.ts`, `siteSetting.ts`, `category/category.ts`)
   - `data/seed.ts` — only `SEED_SETTINGS` remains (the placeholder shown before `GET /admin/settings` resolves). The other four arrays were dead leftovers from the localStorage era and were deleted.
   - `constants/admin.tsx` — admin constants + nav: `PRODUCT_CATS`, `GALLERY_CATS`, `STATUS_COLORS`, `STATUS_BG`, `NAV_ITEMS`, and the `AdminSection` type. **Must stay `.tsx`** because `NAV_ITEMS` contains JSX icon elements (JSX doesn't parse in `.ts` files).
   - `utils/api.ts` — the ONLY place the admin talks HTTP (see "Data / persistence"); `utils/storage.tsx` — `load`/`save` localStorage helpers, now **unused** (kept for the newsletter rebuild); `utils/formatWhen.ts` — `formatWhen(iso)`, shared by the Quotes table/detail modal and the dashboard's recent-quotes list
-  - `components/ui/` — one file per admin UI primitive: `badge.tsx` (`Badge`), `modal.tsx` (`Modal`), `confirmModal.tsx` (`ConfirmModal`), `input.tsx` (`Input`), `Textarea.tsx` (`Textarea`), `select.tsx` (`Select`), `imageUploadField.tsx` (`ImageUploadField`)
+  - `components/ui/` — one file per admin UI primitive: `badge.tsx` (`Badge`), `modal.tsx` (`Modal`), `confirmModal.tsx` (`ConfirmModal`), `input.tsx` (`Input`), `Textarea.tsx` (`Textarea`), `select.tsx` (`Select`), `imageUploadField.tsx` (`ImageUploadField`), `categorySelect.tsx` (`CategorySelect` — the Category field with inline create/rename/delete; used by the product and gallery modals)
   - `components/layout/` — admin chrome: `adminLogin.tsx` (`AdminLogin` — POSTs `{ email, password }` to the backend `/admin/admin-login`; on success stores `cdaah_admin` + JWT `cdaah_token` in sessionStorage), `sidebar.tsx` (`Sidebar` — router `<Link>`-based nav, active section derived from URL), `adminProvider.tsx` (`AdminProvider` context + `useAdmin()` hook — owns ALL admin state: auth (`sessionStorage["cdaah_admin"]`), the five MongoDB-backed collections and their per-item async mutators, `loading`/`error`, `quoteCount`; pages consume data via `useAdmin()` instead of props), `adminLayout.tsx` (`AdminLayout` — the blueprint: confirmation dialog + `Sidebar` + top bar header + `<main><Outlet/></main>`; no props, derives `section` from the URL path)
   - `pages/` — one file per dashboard panel: `DashBoard.tsx` (`AdminOverview` — uses `useNavigate` instead of `setSection`), `adminProduct.tsx` (`AdminProducts` + `ProductModal` + `emptyProduct` + `slugify`; the modal auto-fills `slug` from the name until the admin edits the field by hand), `quoteRequest.tsx` (`AdminQuotes`), `galleryModal.tsx` (`AdminGallery` + `GalleryModal`), `testimonials.tsx` (`AdminTestimonials` + `TestimonialModal`), `setting.tsx` (`AdminSettings`)
   - `AdminApp.tsx` — the auth gate route element: uses `useAdmin()`; renders `AdminLogin` when not authed, otherwise `<Outlet />` (the admin routes under `AdminLayout`)
@@ -184,7 +215,7 @@ src/app/client/
 ├── types/          → TypeScript interfaces only (e.g. types/Product.ts)
 ├── data/           → `siteDefaults.ts` only (`SITE_DEFAULTS`, `withSettingsDefaults`, `whatsappLink` — the fallbacks for settings-driven copy). Product/gallery/testimonial arrays are gone; everything comes from MongoDB.
 ├── hooks/          → shared React hooks (useInView, useCounter)
-├── utils/          → `api.ts` (`publicApi` incl. `createQuote` and `settings()`, `PublicApiError`, `cdn`) — the ONLY place the public site talks HTTP
+├── utils/          → `api.ts` (`publicApi` incl. `createQuote`, `categories()` and `settings()`, `PublicApiError`, `cdn`) — the ONLY place the public site talks HTTP; `categories.ts` (`categoryFilters`/`inCategory`/`catLabel` — the shared filter-pill logic, see "Categories")
 ├── components/
 │   ├── layout/     → site-wide chrome: Navbar, Footer, BackToTop, globalStyle (globalStyles + GlobalStyles), siteDataProvider (useSiteData)
 │   └── pages/      → section components grouped by route
@@ -201,10 +232,12 @@ src/app/client/
 | `HeroCarousel` (+ `heroSlides`) | `components/pages/home/homeCaurousel.tsx` | Home |
 | `ServicesGrid` (+ `services`) | `components/pages/home/homeService.tsx` | Home |
 | `WhyChooseUs` (+ `whyUs`) | `components/pages/home/homeWhyChooseUs.tsx` | Home |
-| `FeaturedProducts` (+ `PRODUCT_FILTER_CATS`) | `components/pages/home/homeFeatureProducts.tsx` | Home |
+| `FeaturedProducts` | `components/pages/home/homeFeatureProducts.tsx` | Home |
 | `Testimonials` (+ `testimonials`) | `components/pages/home/homeTestimonials.tsx` | Home |
 | `StatCounter` | `components/pages/aboutUs/aboutUsStatCounter.tsx` | About |
 | `QuoteModal` | `components/pages/Product/productQuoteModal.tsx` | ProductDetail |
+| `categoryFilters`/`inCategory`/`catLabel` | `utils/categories.ts` | FeaturedProducts, GalleryPage |
+| `CategorySelect` | `admin/components/ui/categorySelect.tsx` | AdminProducts, AdminGallery |
 | `useInView(threshold)` | `hooks/useInView.ts` | all home sections, StatCounter, ProductDetail, About |
 | `useCounter(target, active)` | `hooks/useCounter.ts` | StatCounter (0 → target animation) |
 | `Product` (type) | `types/Product.ts` | Gallery, ProductDetail, FeaturedProducts, QuoteModal |
@@ -221,14 +254,14 @@ src/app/client/
 - `src/imports/` — static images (`image.png` = logo, `image-1..12.png`). **Always imported via RELATIVE paths, never `@/imports/...`** — the user has had path issues with the alias (see conventions below).
 
 ### Data / persistence
-- **Public products/gallery/testimonials now come from MongoDB** through the public API (see "Public read API"). `data/products.ts` and `data/productSize.ts` were **deleted**; sizes live on each product document. Marketing/hero/about/contact imagery is still bundled locally in `src/imports/`.
+- **Public products/gallery/testimonials/categories/settings now come from MongoDB** through the public API (see "Public read API"). `data/products.ts` and `data/productSize.ts` were **deleted**; sizes live on each product document. Marketing/hero/about/contact imagery is still bundled locally in `src/imports/`.
 - The contact/quote forms now **POST to `/api/quotes`** (see "Public read API"), and that one request is all they make — the owner-alert email is the server's business.
 - Admin login goes through the backend (`POST /admin/admin-login`): credentials are not hardcoded in the frontend; the returned JWT is stored as `cdaah_token` in sessionStorage.
-- **The admin dashboard IS now fully wired to the backend CRUD for all 5 resources.** There are no `localStorage` seeds left in the admin data path — `adminProvider.tsx` fetches from MongoDB and every mutation is a real API call.
+- **The admin dashboard IS now fully wired to the backend CRUD for all 6 resources.** There are no `localStorage` seeds left in the admin data path — `adminProvider.tsx` fetches from MongoDB and every mutation is a real API call.
   - `utils/api.ts` is the **single** place that talks HTTP: `API_BASE` (`VITE_API_BASE`, default `http://localhost:3000`), `getToken()`, `ApiError`, and the `api.{getAll,create,update,remove,getSettings,saveSettings}` verbs. It injects `Authorization: Bearer`, prefixes `/admin`, and **calls a registered unauthorized handler on any 401** (the provider registers `onLogout`, so an expired token self-heals by logging out instead of hanging). `adminLogin.tsx` and `imageUploadField.tsx` import `API_BASE`/`getToken()` from here — do not hardcode `http://localhost:3000` anywhere.
   - Response contract is uniformly `{ status, message?, data?, errors? }`. `errors` is a field→message map on validation failure and `api.ts` joins it into the banner text.
-  - `adminProvider` exposes **per-item async** methods, not array setters: `createProduct/updateProduct/deleteProduct`, `createGalleryItem/…`, `createTestimonial/…`, `updateQuoteStatus(id, status)`, `deleteQuote(id)`, `refreshQuotes()`, `saveSettings`. It also exposes `loading`, `error`, `clearError`, `quoteCount`. The array setters (`setProducts` etc.) are **gone** — pages must not reintroduce them.
-  - On mount (and after login) the provider `Promise.all`s all five GETs. `AdminApp.tsx` renders a spinner while that first load is in flight, so pages never flash empty tables.
+  - `adminProvider` exposes **per-item async** methods, not array setters: `createProduct/updateProduct/deleteProduct`, `createGalleryItem/…`, `createTestimonial/…`, `updateQuoteStatus(id, status)`, `deleteQuote(id)`, `refreshQuotes()`, `saveSettings`, and `createCategory(name)/renameCategory(id, name)/deleteCategory(id, name)`. The last two also rewrite `cat` across the provider's own `products`/`gallery` state, because the server does the same to the documents. It also exposes `loading`, `error`, `clearError`, `quoteCount`. The array setters (`setProducts` etc.) are **gone** — pages must not reintroduce them.
+  - On mount (and after login) the provider `Promise.all`s all six GETs. The sixth is `categories` — the shared product/gallery category list, and the reason the Category selects in the product/gallery modals are populated at all. `AdminApp.tsx` renders a spinner while that first load is in flight, so pages never flash empty tables.
   - **The provider never refetches on a timer**, so a quote submitted by a customer will not appear until you press **Refresh** on the Quotes page (which calls `refreshQuotes()`) or reload. `quoteRequest.tsx` also calls `refreshQuotes()` on mount, so navigating away and back picks up new rows. Polling was deliberately not added — it would silently swap rows under an open detail modal.
   - `updateQuoteStatus` sends **only** `{ status }`. The backend uses `findByIdAndUpdate` (not `replaceOne`), so partial updates preserve the other fields — this is what makes the partial update safe.
   - **Known limitation: 15-minute token expiry with no refresh flow.** A 401 logs the admin out and they must sign in again. `REFRESH_TOKEN_SECRET` is in `.env` but still unused. Adding refresh tokens is the natural next step.

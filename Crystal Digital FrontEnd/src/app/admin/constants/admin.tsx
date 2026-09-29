@@ -8,8 +8,11 @@ import {
   Star,
 } from "lucide-react";
 
-export const PRODUCT_CATS = ["Crystal", "Trophies", "Plaques", "Medals", "Collection", "Gifts"];
-export const GALLERY_CATS = ["Crystal Awards", "Trophies", "Plaques", "Medals", "Collection", "Printing"];
+// PRODUCT_CATS and GALLERY_CATS used to live here as hardcoded arrays, and had
+// already drifted apart from each other and from a third copy in GalleryPage.
+// Categories are now a database collection (`categories`) managed inline in the
+// product modal via CategorySelect, and read by the public site through
+// GET /api/categories — there is deliberately no list to keep in sync here.
 export const STATUS_COLORS: Record<QuoteRequest["status"], string> = {
   new: "#2563EB",
   reviewed: "#D4AF37",

@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { AdminProduct } from "../types/interface/production/adminProduct";
+import { CategorySelect } from "../components/ui/categorySelect";
 import { ConfirmModal } from "../components/ui/confirmModal";
 import { ImageUploadField } from "../components/ui/imageUploadField";
 import { Input } from "../components/ui/input";
 import { Modal } from "../components/ui/modal";
-import { Select } from "../components/ui/select";
 import { Textarea } from "../components/ui/Textarea";
 import { useAdmin } from "../components/layout/adminProvider";
-import { PRODUCT_CATS } from "../constants/admin";
 import { Pencil, Plus, Search, Tag, Trash2, X, AlertCircle, Loader2 } from "lucide-react";
 
 // ── Products Panel ────────────────────────────────────────────────────────────
@@ -20,7 +19,7 @@ function slugify(name: string) {
 }
 
 function emptyProduct(): Omit<AdminProduct, "id"> {
-  return { slug: "", name: "", desc: "", fullDesc: "", cat: "Crystal", features: [], specs: [], customizable: [], tags: [], sizes: [], imgUrl: "", imgPublicId: "" };
+  return { slug: "", name: "", desc: "", fullDesc: "", cat: "", features: [], specs: [], customizable: [], tags: [], sizes: [], imgUrl: "", imgPublicId: "" };
 }
 
 function ProductModal({
@@ -65,9 +64,7 @@ function ProductModal({
       <div className="space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Product Name *" value={form.name} onChange={(e) => { const name = e.target.value; setForm((f) => ({ ...f, name, slug: slugTouched ? f.slug : slugify(name) })); }} placeholder="e.g. Crystal Award" required />
-          <Select label="Category *" value={form.cat} onChange={(e) => setForm({ ...form, cat: e.target.value })}>
-            {PRODUCT_CATS.map((c) => <option key={c}>{c}</option>)}
-          </Select>
+          <CategorySelect label="Category" value={form.cat} onChange={(cat) => setForm({ ...form, cat })} />
         </div>
         <Input
           label="URL Slug *"
@@ -228,7 +225,7 @@ function ProductModal({
 }
 
 export function AdminProducts() {
-  const { products, createProduct, updateProduct, deleteProduct, error, clearError, loading } = useAdmin();
+  const { products, categories, createProduct, updateProduct, deleteProduct, error, clearError, loading } = useAdmin();
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<AdminProduct | null>(null);
@@ -236,9 +233,21 @@ export function AdminProducts() {
   const [catFilter, setCatFilter] = useState("All");
   const [saving, setSaving] = useState(false);
 
-  const filtered = products.filter((p) =>
-    (catFilter === "All" || p.cat === catFilter) &&
-    (p.name.toLowerCase().includes(search.toLowerCase()) || p.cat.toLowerCase().includes(search.toLowerCase()))
+  // "Uncategorized" is a real state: deleting a category in the product modal
+  // clears the cat of every product that used it, and those products have to
+  // stay findable in this table.
+  const filters = [
+    "All",
+    ...categories.map((c) => c.name),
+    ...(products.some((p) => !p.cat) ? ["Uncategorized"] : []),
+  ];
+
+  const filtered = products.filter(
+    (p) =>
+      (catFilter === "All" ||
+        (catFilter === "Uncategorized" ? !p.cat : p.cat === catFilter)) &&
+      (p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.cat.toLowerCase().includes(search.toLowerCase()))
   );
 
   async function handleSave(data: Omit<AdminProduct, "id">) {
@@ -303,8 +312,11 @@ export function AdminProducts() {
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search products..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 bg-white" />
         </div>
         <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 bg-white">
-          <option value="All">All Categories</option>
-          {PRODUCT_CATS.map((c) => <option key={c}>{c}</option>)}
+          {filters.map((c) => (
+            <option key={c} value={c}>
+              {c === "All" ? "All Categories" : c}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -328,7 +340,9 @@ export function AdminProducts() {
                     <div className="text-gray-500 text-xs mt-0.5 truncate max-w-xs">{p.desc}</div>
                   </td>
                   <td className="px-5 py-4 hidden sm:table-cell">
-                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">{p.cat}</span>
+                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">
+                      {p.cat || "Uncategorized"}
+                    </span>
                   </td>
                   <td className="px-5 py-4 hidden md:table-cell">
                     <div className="flex flex-wrap gap-1">
