@@ -25,7 +25,7 @@ const publicProduct = (doc) => ({
   cat: doc.cat,
   features: doc.features,
   specs: doc.specs,
-  customizable: doc.customizable,
+  customizationFields: doc.customizationFields,
   tags: doc.tags,
   sizes: doc.sizes,
 });
@@ -108,6 +108,57 @@ export const getPublicSettings = async (req, res) => {
 
 const field = (value, max) => String(value ?? "").trim().slice(0, max);
 
+// Reads the customer's answers to the product's customizationFields and checks
+// them against the product's own definition. The product is loaded from its
+// slug rather than trusting the posted labels, which is the whole point: the
+// browser enforces "required" as a courtesy, this is what actually holds.
+//
+// Returns the pairs to store plus any per-label errors. An answer to a field the
+// product does not define is dropped rather than rejected — the admin deleted the
+// field between page load and submit, and that is not the customer's fault.
+const readCustomization = (product, raw) => {
+  // The form posts multipart, so this arrives as a JSON string rather than an
+  // array. A JSON body (the contact form, or curl) gives a real array. Anything
+  // else is treated as "nothing answered" rather than throwing on a bad cast.
+  let rows = raw;
+
+  if (typeof rows === "string") {
+    try {
+      rows = JSON.parse(rows);
+    } catch {
+      rows = [];
+    }
+  }
+
+  const posted = new Map(
+    (Array.isArray(rows) ? rows : []).map((row) => [
+      field(row?.label, 120),
+      field(row?.value, 1000),
+    ])
+  );
+
+  const stored = [];
+  const errors = {};
+
+  for (const def of product?.customizationFields ?? []) {
+    const value = posted.get(def.label) ?? "";
+
+    if (def.required && !value) {
+      errors[`customization.${def.label}`] = `${def.label} is required.`;
+      continue;
+    }
+
+    // Truncated rather than rejected: a long answer is a nuisance, not an
+    // attack, and the field's own maxLength is the admin's stated limit.
+    stored.push({
+      label: def.label,
+      value: value.slice(0, def.maxLength ?? 300),
+    });
+  }
+
+  return { stored, errors };
+};
+
 // Customer artwork is named randomly rather than after the file the customer
 // chose. A predictable public_id ("logo-final") means anyone can enumerate the
 // quote-artwork folder and read other customers' designs before they are
@@ -179,6 +230,40 @@ export const createPublicQuote = async (req, res) => {
     errors.email = "That email address doesn't look right.";
   }
 
+  const productSlug = field(req.body.productSlug, 160);
+
+  // A product-scoped quote has to resolve to a real product before its size and
+  // customization rules can be checked. The general contact form posts no slug,
+  // so this is skipped entirely for it rather than being an error.
+  let product = null;
+
+  if (productSlug) {
+    product = await ProductModel.findOne({ slug: productSlug }).lean();
+
+    if (!product) {
+      errors.product = "That product is no longer available. Please pick another one.";
+    }
+  }
+
+  if (product) {
+    const size = field(req.body.size, 80);
+
+    // Only enforced when the product actually offers sizes — a one-size product
+    // must not demand one, and the sizes themselves are the admin's list, so an
+    // invented size is rejected rather than stored.
+    if (product.sizes.length > 0) {
+      if (!size) {
+        errors.size = "Please choose a size.";
+      } else if (!product.sizes.includes(size)) {
+        errors.size = "Please choose one of the listed sizes.";
+      }
+    }
+
+    const answers = readCustomization(product, req.body.customization);
+    Object.assign(errors, answers.errors);
+    req.quoteCustomization = answers.stored;
+  }
+
   if (Object.keys(errors).length > 0) {
     return res.status(400).json({
       status: false,
@@ -197,10 +282,11 @@ export const createPublicQuote = async (req, res) => {
       message,
       phone: field(req.body.phone, 40),
       product: field(req.body.product, 160),
+      productSlug,
       size: field(req.body.size, 80),
       service: field(req.body.service, 120),
       quantity: field(req.body.quantity, 20),
-      engrave: field(req.body.engrave, 500),
+      customization: req.quoteCustomization ?? [],
       // Taken from the uploaded part rather than a separate field, so the name
       // the admin reads always describes the image that was actually stored.
       attachment: req.file

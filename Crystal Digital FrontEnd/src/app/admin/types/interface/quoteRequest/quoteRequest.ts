@@ -4,10 +4,14 @@ export interface QuoteRequest {
   email: string;
   phone: string;
   product: string;
+  productSlug?: string;
   size?: string;
   service: string;
   quantity: string;
-  engrave: string;
+  // The customer's answers to the product's customizationFields. The label travels
+  // with the value so an answer stays readable after the field is renamed or
+  // removed; it replaced the `engrave` free-text box.
+  customization: { label: string; value: string }[];
   attachment: string;
   // The customer's artwork on Cloudinary. Empty when they attached nothing, or
   // when the upload could not be stored (wrong type, over the size cap, or the

@@ -47,10 +47,12 @@ export interface QuoteSubmission {
   email: string;
   phone?: string;
   product?: string;
+  /** Which product's rules apply — the server re-reads it rather than trusting the posted labels. */
+  productSlug?: string;
   size?: string;
   service?: string;
   quantity?: string;
-  engrave?: string;
+  customization?: { label: string; value: string }[];
   attachment?: string;
   message?: string;
   website?: string;

@@ -10,6 +10,7 @@
     "seed:dump": "node dumpSeed.mjs",
     "seed:settings": "node seedSettings.mjs",
     "seed:categories": "node seedCategories.mjs",
+    "migrate:customization": "node migrateCustomization.mjs",
     "e2e": "node e2e.mjs",
     "state": "node state.mjs"
   },

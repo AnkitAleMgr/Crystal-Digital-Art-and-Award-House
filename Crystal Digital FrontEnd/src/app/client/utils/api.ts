@@ -97,9 +97,12 @@ export const publicApi = {
     const form = new FormData();
 
     for (const [key, value] of Object.entries(body)) {
-      if (value !== undefined && value !== null && value !== "") {
-        form.append(key, String(value));
-      }
+      if (value === undefined || value === null || value === "") continue;
+
+      // FormData holds strings only. An array of objects would otherwise become
+      // the literal "[object Object]" and every customization answer would be
+      // lost, which the server then reads as a missing required field.
+      form.append(key, typeof value === "object" ? JSON.stringify(value) : String(value));
     }
 
     if (artwork) {

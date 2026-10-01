@@ -10,7 +10,7 @@ export interface AdminProduct {
   cat: string;
   features: string[];
   specs: { label: string; value: string }[];
-  customizable: string[];
+  customizationFields: { label: string; required: boolean; maxLength: number }[];
   tags: string[];
   sizes: string[];
   imgUrl: string;

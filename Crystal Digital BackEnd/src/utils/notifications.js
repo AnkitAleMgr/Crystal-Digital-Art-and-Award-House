@@ -121,7 +121,10 @@ export const notifyOwnerOfQuote = async (quote) => {
     row("Service", esc(dash(quote.service, "—"))),
     row("Size", esc(dash(quote.size, "—"))),
     row("Quantity", esc(dash(quote.quantity, "—"))),
-    row("Engraving", esc(dash(quote.engrave, "—"))),
+    // One row per customization answer rather than a single blob, because the
+    // whole point of the structured fields is that the owner can read them
+    // without guessing which bit answers which question.
+    ...(quote.customization ?? []).map((c) => row(esc(c.label), esc(c.value || "—"))),
     row("Artwork file", esc(dash(quote.attachment, "No file attached"))),
   ];
 

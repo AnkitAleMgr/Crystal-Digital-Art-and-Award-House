@@ -53,12 +53,12 @@ export const SEED_PRODUCTS = [
         "_id": "6ab81e48f5b0c25b6ad83253"
       }
     ],
-    "customizable": [
-      "Recipient's name & designation",
-      "Company or school logo",
-      "Custom message up to 150 words",
-      "Achievement date",
-      "Award title & category"
+    "customizationFields": [
+      { "label": "Recipient's name & designation", "required": false, "maxLength": 300 },
+      { "label": "Company or school logo", "required": false, "maxLength": 300 },
+      { "label": "Custom message up to 150 words", "required": false, "maxLength": 300 },
+      { "label": "Achievement date", "required": false, "maxLength": 300 },
+      { "label": "Award title & category", "required": false, "maxLength": 300 }
     ],
     "tags": [
       "Best Seller",
@@ -117,12 +117,12 @@ export const SEED_PRODUCTS = [
         "_id": "6ab81e4cf5b0c25b6ad8325a"
       }
     ],
-    "customizable": [
-      "Recipient name & title",
-      "Logo & badge printing",
-      "Custom message or citation",
-      "Date and event details",
-      "Colour-fill engraving"
+    "customizationFields": [
+      { "label": "Recipient name & title", "required": false, "maxLength": 300 },
+      { "label": "Logo & badge printing", "required": false, "maxLength": 300 },
+      { "label": "Custom message or citation", "required": false, "maxLength": 300 },
+      { "label": "Date and event details", "required": false, "maxLength": 300 },
+      { "label": "Colour-fill engraving", "required": false, "maxLength": 300 }
     ],
     "tags": [
       "Popular"
@@ -180,12 +180,12 @@ export const SEED_PRODUCTS = [
         "_id": "6ab81e50f5b0c25b6ad83261"
       }
     ],
-    "customizable": [
-      "Trophy height and design style",
-      "Name plate text & event details",
-      "Topper style (sport, academic, cultural)",
-      "Base material (wood, marble, acrylic)",
-      "Ribbon or medal add-on"
+    "customizationFields": [
+      { "label": "Trophy height and design style", "required": false, "maxLength": 300 },
+      { "label": "Name plate text & event details", "required": false, "maxLength": 300 },
+      { "label": "Topper style (sport, academic, cultural)", "required": false, "maxLength": 300 },
+      { "label": "Base material (wood, marble, acrylic)", "required": false, "maxLength": 300 },
+      { "label": "Ribbon or medal add-on", "required": false, "maxLength": 300 }
     ],
     "tags": [
       "Most Popular"
@@ -248,12 +248,12 @@ export const SEED_PRODUCTS = [
         "_id": "6ab81e56f5b0c25b6ad83268"
       }
     ],
-    "customizable": [
-      "Carving style and motifs",
-      "Wood type and colour",
-      "Name plate inscription",
-      "Size and height",
-      "Cultural symbol or logo"
+    "customizationFields": [
+      { "label": "Carving style and motifs", "required": false, "maxLength": 300 },
+      { "label": "Wood type and colour", "required": false, "maxLength": 300 },
+      { "label": "Name plate inscription", "required": false, "maxLength": 300 },
+      { "label": "Size and height", "required": false, "maxLength": 300 },
+      { "label": "Cultural symbol or logo", "required": false, "maxLength": 300 }
     ],
     "tags": [
       "Unique",
@@ -314,12 +314,12 @@ export const SEED_PRODUCTS = [
         "_id": "6ab81e5af5b0c25b6ad8326f"
       }
     ],
-    "customizable": [
-      "Event name and logo",
-      "Position text (1st, 2nd, 3rd)",
-      "Year and date",
-      "Custom ribbon colour",
-      "Back-side engraving"
+    "customizationFields": [
+      { "label": "Event name and logo", "required": false, "maxLength": 300 },
+      { "label": "Position text (1st, 2nd, 3rd)", "required": false, "maxLength": 300 },
+      { "label": "Year and date", "required": false, "maxLength": 300 },
+      { "label": "Custom ribbon colour", "required": false, "maxLength": 300 },
+      { "label": "Back-side engraving", "required": false, "maxLength": 300 }
     ],
     "tags": [
       "Bulk Orders",
@@ -378,12 +378,12 @@ export const SEED_PRODUCTS = [
         "_id": "6ab81e62f5b0c25b6ad83276"
       }
     ],
-    "customizable": [
-      "Any text, name, or message",
-      "Logo and brand identity",
-      "Colour and material",
-      "Size and quantity",
-      "Gift wrapping and packaging"
+    "customizationFields": [
+      { "label": "Any text, name, or message", "required": false, "maxLength": 300 },
+      { "label": "Logo and brand identity", "required": false, "maxLength": 300 },
+      { "label": "Colour and material", "required": false, "maxLength": 300 },
+      { "label": "Size and quantity", "required": false, "maxLength": 300 },
+      { "label": "Gift wrapping and packaging", "required": false, "maxLength": 300 }
     ],
     "tags": [
       "Full Range"
@@ -439,12 +439,12 @@ export const SEED_PRODUCTS = [
         "_id": "6ab81e67f5b0c25b6ad8327d"
       }
     ],
-    "customizable": [
-      "Sport type and figurine design",
-      "Name plate text",
-      "Number of positions in set",
-      "Base style and material",
-      "Matching medal set add-on"
+    "customizationFields": [
+      { "label": "Sport type and figurine design", "required": false, "maxLength": 300 },
+      { "label": "Name plate text", "required": false, "maxLength": 300 },
+      { "label": "Number of positions in set", "required": false, "maxLength": 300 },
+      { "label": "Base style and material", "required": false, "maxLength": 300 },
+      { "label": "Matching medal set add-on", "required": false, "maxLength": 300 }
     ],
     "tags": [
       "Sets",
@@ -505,12 +505,12 @@ export const SEED_PRODUCTS = [
         "_id": "6ab81e6bf5b0c25b6ad83284"
       }
     ],
-    "customizable": [
-      "Height and design style",
-      "Engraved name and title",
-      "Base material and colour",
-      "Personal message inscription",
-      "Logo or emblem on body"
+    "customizationFields": [
+      { "label": "Height and design style", "required": false, "maxLength": 300 },
+      { "label": "Engraved name and title", "required": false, "maxLength": 300 },
+      { "label": "Base material and colour", "required": false, "maxLength": 300 },
+      { "label": "Personal message inscription", "required": false, "maxLength": 300 },
+      { "label": "Logo or emblem on body", "required": false, "maxLength": 300 }
     ],
     "tags": [
       "Premium",
@@ -570,12 +570,12 @@ export const SEED_PRODUCTS = [
         "_id": "6ab81e70f5b0c25b6ad8328b"
       }
     ],
-    "customizable": [
-      "Carving depth and motifs",
-      "Colour scheme and paint",
-      "Inscription plate text",
-      "Tier count and height",
-      "Cultural symbol integration"
+    "customizationFields": [
+      { "label": "Carving depth and motifs", "required": false, "maxLength": 300 },
+      { "label": "Colour scheme and paint", "required": false, "maxLength": 300 },
+      { "label": "Inscription plate text", "required": false, "maxLength": 300 },
+      { "label": "Tier count and height", "required": false, "maxLength": 300 },
+      { "label": "Cultural symbol integration", "required": false, "maxLength": 300 }
     ],
     "tags": [
       "Handmade",
@@ -636,12 +636,12 @@ export const SEED_PRODUCTS = [
         "_id": "6ab81e74f5b0c25b6ad83292"
       }
     ],
-    "customizable": [
-      "Trophy height and shape",
-      "Crystal colour and cut style",
-      "Engraved name plate",
-      "Base lighting option",
-      "Glass case dimensions"
+    "customizationFields": [
+      { "label": "Trophy height and shape", "required": false, "maxLength": 300 },
+      { "label": "Crystal colour and cut style", "required": false, "maxLength": 300 },
+      { "label": "Engraved name plate", "required": false, "maxLength": 300 },
+      { "label": "Base lighting option", "required": false, "maxLength": 300 },
+      { "label": "Glass case dimensions", "required": false, "maxLength": 300 }
     ],
     "tags": [
       "Luxury",

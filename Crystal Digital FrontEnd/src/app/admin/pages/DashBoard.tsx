@@ -5,6 +5,15 @@ import { Badge } from "../components/ui/badge";
 import { useAdmin } from "../components/layout/adminProvider";
 import { formatWhen } from "../utils/formatWhen";
 
+// A one-line summary of what the customer actually told us, for the recent-quotes
+// list. The product quote modal no longer has a free-text box, so on those rows
+// the answers are all that is there to show.
+function quoteSummary(q: { message: string; customization?: { label: string; value: string }[] }) {
+  if (q.message) return q.message;
+  const answers = (q.customization ?? []).map((c) => c.value).filter(Boolean);
+  return answers.join(" · ");
+}
+
 // ── Overview ──────────────────────────────────────────────────────────────────
 export function AdminOverview() {
   const { products, gallery, testimonials, quotes, quoteCount } = useAdmin();
@@ -62,7 +71,7 @@ export function AdminOverview() {
                   <span className="font-semibold text-sm text-gray-800">{q.name}</span>
                   <Badge status={q.status} />
                 </div>
-                <div className="text-xs text-gray-500 truncate">{q.product || q.service || "General enquiry"} — {(q.message || q.engrave).slice(0, 60)}{(q.message || q.engrave).length > 60 ? "..." : ""}</div>
+                <div className="text-xs text-gray-500 truncate">{q.product || q.service || "General enquiry"} — {quoteSummary(q).slice(0, 60)}{quoteSummary(q).length > 60 ? "..." : ""}</div>
               </div>
               <div className="text-xs text-gray-400 flex-shrink-0">{formatWhen(q.createdAt)}</div>
             </div>

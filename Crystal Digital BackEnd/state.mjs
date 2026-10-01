@@ -60,9 +60,15 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Quote artwork is named `attachmentPublicId`, not `imgPublicId`, so a sweep that
+// only knows the products/gallery column reports a customer's live artwork as an
+// orphan on every run. That is a false alarm, not a leak.
 const refs = new Set();
 for (const M of [ProductModel, GalleryModel]) {
   for (const d of await M.find({}, "imgPublicId")) if (d.imgPublicId) refs.add(d.imgPublicId);
+}
+for (const d of await QuoteModel.find({}, "attachmentPublicId")) {
+  if (d.attachmentPublicId) refs.add(d.attachmentPublicId);
 }
 
 const listed = await cloudinary.api.resources({ max_results: 500, type: "upload" });

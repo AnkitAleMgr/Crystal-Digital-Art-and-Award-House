@@ -229,11 +229,7 @@ export function ProductDetailPage() {
                     {product.sizes.map((size) => (
                       <button
                         key={size}
-                        onClick={() =>
-                          setSelectedSize(
-                            size === selectedSize ? "" : size,
-                          )
-                        }
+                        onClick={() => setSelectedSize(size)}
                         className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
                         style={{
                           background:
@@ -257,19 +253,11 @@ export function ProductDetailPage() {
                       </button>
                     ))}
                   </div>
-                  {selectedSize ? (
-                    <p
-                      className="text-xs font-semibold mt-3"
-                      style={{ color: "#2563EB" }}
-                    >
-                      ✓ Selected: {selectedSize}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-gray-400 mt-3">
-                      No size selected — you can specify in the quote
-                      form.
-                    </p>
-                  )}
+                  <p className="text-xs font-semibold mt-3" style={{ color: selectedSize ? "#2563EB" : "#9CA3AF" }}>
+                    {selectedSize
+                      ? `✓ Selected: ${selectedSize}`
+                      : "Pick a size — it is required on the quote form."}
+                  </p>
                 </div>
               )}
 
@@ -502,9 +490,9 @@ export function ProductDetailPage() {
                 ref={customRef}
                 className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-3"
               >
-                {product.customizable.map((item, i) => (
+                {product.customizationFields.map((item) => (
                   <div
-                    key={item}
+                    key={item.label}
                     className="flex items-center gap-3 p-4 rounded-xl"
                     style={{
                       background: "rgba(255,255,255,0.10)",
@@ -515,7 +503,7 @@ export function ProductDetailPage() {
                       transform: customVisible
                         ? "none"
                         : "translateX(12px)",
-                      transition: `opacity 0.4s ease ${i * 60}ms, transform 0.4s ease ${i * 60}ms`,
+                      transition: `opacity 0.4s ease ${product.customizationFields.indexOf(item) * 60}ms, transform 0.4s ease ${product.customizationFields.indexOf(item) * 60}ms`,
                     }}
                   >
                     <span
@@ -525,10 +513,10 @@ export function ProductDetailPage() {
                         color: "#D4AF37",
                       }}
                     >
-                      {i + 1}
+                      {product.customizationFields.indexOf(item) + 1}
                     </span>
                     <span className="text-sm font-medium text-white/90">
-                      {item}
+                      {item.label}
                     </span>
                   </div>
                 ))}

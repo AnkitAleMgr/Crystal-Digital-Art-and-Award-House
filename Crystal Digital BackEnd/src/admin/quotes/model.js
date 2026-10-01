@@ -15,10 +15,29 @@ const QuoteSchema = new mongoose.Schema(
     },
     phone: { type: String, default: "", trim: true, maxlength: 40 },
     product: { type: String, default: "", trim: true, maxlength: 160 },
+    // Which product's rules this quote was filed under, so a later edit to that
+    // product's required fields cannot be checked against the wrong definition.
+    // Empty for a general contact-form enquiry, which is not product-scoped.
+    productSlug: { type: String, default: "", trim: true, maxlength: 160 },
     size: { type: String, default: "", trim: true, maxlength: 80 },
     service: { type: String, default: "", trim: true, maxlength: 120 },
     quantity: { type: String, default: "", trim: true, maxlength: 20 },
-    engrave: { type: String, default: "", trim: true, maxlength: 500 },
+    // The customer's answers to the product's customizationFields, stored as
+    // [{ label, value }] rather than one free-text blob. The label is kept with
+    // the value on purpose: the admin reads "Recipient name: Ramesh", and the
+    // answer stays meaningful after the product's field is renamed or removed.
+    // It replaced the `engrave` free-text box, which let a customer answer a
+    // question the admin never asked.
+    customization: {
+      type: [
+        {
+          _id: false,
+          label: { type: String, trim: true, maxlength: 120 },
+          value: { type: String, trim: true, maxlength: 1000 },
+        },
+      ],
+      default: [],
+    },
     // The name the customer chose, kept even when the upload succeeded so the
     // admin recognises the file ("logo-final.png") instead of a random id.
     attachment: { type: String, default: "", trim: true, maxlength: 160 },

@@ -33,7 +33,7 @@ const callForm = async (path, form, opts = {}) => {
   const res = await fetch(`${API}${path}`, {
     method: "POST",
     ...opts,
-    headers: { ...(opts.token ? { Authorization: `Bearer ${opts.token}` } : {}), ...opts.headers },
+    headers: { ...(opts.token ? { Authorization: `Bearer ${opts.token}` } : {}), ...(opts.headers ?? {}) },
     body: form,
   });
   const text = await res.text();
@@ -56,61 +56,136 @@ const token = jwt.sign(
 );
 console.log("using admin:", admin.email, admin._id.toString());
 
+// No slug: the admin form does not ask for one any more, the server derives it
+// from the name (checked in step 2).
 const product = {
-  slug: "e2e-test-widget",
   name: "E2E Test Widget",
   desc: "created by the e2e check",
   cat: "Crystal",
   features: ["feature a"],
   specs: [{ label: "Material", value: "glass" }],
-  customizable: [],
+  customizationFields: [
+    { label: "Recipient name", required: true, maxLength: 80 },
+    { label: "Engraving note", required: false, maxLength: 120 },
+  ],
   tags: ["new"],
   sizes: ["S", "L"],
 };
 
-const noSlug = { ...product, slug: undefined };
-delete noSlug.slug;
+// A product the admin left without customization fields, which is a valid state
+// and must not demand anything on the quote form.
+const plainProduct = {
+  name: "E2E Plain Widget",
+  desc: "no customization fields, no sizes",
+  customizationFields: [],
+  sizes: [],
+};
+
+const SLUG = "e2e-test-widget";
 
 const pass = [];
 const fail = [];
 const check = (label, cond, extra = "") =>
   (cond ? pass : fail).push(`${cond ? "PASS" : "FAIL"}  ${label}${extra ? ` — ${extra}` : ""}`);
 
-// 1. Creating without a slug must be rejected (this is what breaks if the admin
-//    UI forgets to send one).
+// The multipart body builder, defined up here because check 8b posts a
+// multipart quote too — that is the shape the real quote modal actually sends.
+const artworkForm = (fields, file) => {
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) form.append(k, v);
+  if (file) form.append("artwork", new Blob([file.bytes], { type: file.type }), file.name);
+  return form;
+};
+
+// 0. A crashed run leaks whatever it had created so far, which would then fail
+//    the count- and slug-based checks below on the next run. Every row this suite
+//    makes uses an @example.com address or a name beginning with "E2E ", so
+//    sweeping those makes the suite idempotent.
+//
+//    This has to run before check 1, not alongside the quote sweep: the product
+//    slug is now derived from the name, so one leftover product shifts every
+//    suffix the slug checks expect.
 {
-  const { code, body } = await call("/admin/products", { method: "POST", token, body: JSON.stringify(noSlug) });
-  check("POST /admin/products without slug is rejected", code === 400 && body.errors?.slug, `code=${code} errors=${JSON.stringify(body.errors)}`);
+  const staleQuotes = (await call("/admin/quotes", { token })).body.data.filter((q) => q.email?.endsWith("@example.com"));
+  for (const q of staleQuotes) await call(`/admin/quotes/${q.id}`, { method: "DELETE", token });
+  if (staleQuotes.length) console.log(`swept ${staleQuotes.length} leftover quote(s) from a previous run`);
+
+  const strays = (await call("/admin/products", { token })).body.data.filter((p) => p.name.startsWith("E2E "));
+  for (const p of strays) await call(`/admin/products/${p.id}`, { method: "DELETE", token });
+  if (strays.length) console.log(`swept ${strays.length} leftover product(s) from a previous run`);
 }
 
-// 2. Duplicate slug must be rejected.
+// 1. A slug sent by the caller is ignored — it is server-owned now, so a crafted
+//    POST cannot pin a product to somebody else's URL.
 {
-  const { code, body } = await call("/admin/products", { method: "POST", token, body: JSON.stringify(product) });
-  check("POST /admin/products with slug succeeds", code === 201 || code === 200, `code=${code} ${body.message ?? ""}`);
+  const { code, body } = await call("/admin/products", {
+    method: "POST", token, body: JSON.stringify({ ...product, slug: "attacker-chosen" }),
+  });
+  check("POST /admin/products ignores a posted slug", code === 201 && body.data?.slug === SLUG, `code=${code} slug=${body.data?.slug}`);
   if (body.data) product.id = body.data.id;
+}
+
+// 2. A second product with the same name must get a distinct slug rather than a
+//    500 on the unique index.
+let plainId = null;
+{
+  const { code, body } = await call("/admin/products", { method: "POST", token, body: JSON.stringify({ ...product, name: "E2E Test Widget" }) });
+  check("a duplicate product name does not collide on the slug", code === 201 && body.data?.slug === `${SLUG}-2`, `code=${code} slug=${body.data?.slug}`);
+  await call(`/admin/products/${body.data?.id}`, { method: "DELETE", token });
+}
+
+// 2b. A product with no customization fields and no sizes is legal.
+{
+  const { code, body } = await call("/admin/products", { method: "POST", token, body: JSON.stringify(plainProduct) });
+  plainId = body.data?.id ?? null;
+  check("a product with no customization fields is accepted", code === 201 && body.data?.customizationFields?.length === 0, `code=${code}`);
 }
 
 // 3. It must show up on the public site, addressed by its slug.
 {
   const { code, body } = await call("/api/products");
-  const found = body.data?.find((p) => p.id === "e2e-test-widget");
+  const found = body.data?.find((p) => p.id === SLUG);
   check("new product appears in GET /api/products", code === 200 && Boolean(found), `count=${body.data?.length}`);
   check("public response omits imgPublicId", found && !("imgPublicId" in found));
   check("public response carries sizes", found && Array.isArray(found.sizes) && found.sizes.length === 2);
+  check("public response carries customizationFields with the required flag", found?.customizationFields?.[0]?.label === "Recipient name" && found?.customizationFields?.[0]?.required === true, JSON.stringify(found?.customizationFields));
+  check("public response has no leftover customizable list", found && !("customizable" in found));
+  check("customization fields carry no subdocument _id", found && !JSON.stringify(found.customizationFields).includes("_id"), JSON.stringify(found?.customizationFields));
 }
 
 // 4. A partial update must not wipe the other fields.
 {
   const { body } = await call("/api/products");
-  const before = body.data.find((p) => p.id === "e2e-test-widget");
+  const before = body.data.find((p) => p.id === SLUG);
   const { code, body: upd } = await call(`/admin/products/${product.id}`, {
     method: "PUT", token, body: JSON.stringify({ name: "E2E Test Widget Renamed" }),
   });
   const { body: after } = await call("/api/products");
-  const now = after.data.find((p) => p.id === "e2e-test-widget");
-  check("PUT partial update keeps the slug", code === 200 && now?.id === "e2e-test-widget", `code=${code}`);
+  const now = after.data.find((p) => p.id === SLUG);
+  check("PUT partial update keeps the slug even when the name changed", code === 200 && now?.id === SLUG, `code=${code}`);
   check("PUT partial update keeps desc", now?.desc === before.desc);
   check("PUT partial update applied the name", now?.name === "E2E Test Widget Renamed");
+}
+
+// 4b. A PUT carrying a slug must not be able to move the public URL.
+{
+  const { code } = await call(`/admin/products/${product.id}`, {
+    method: "PUT", token, body: JSON.stringify({ slug: "hijacked-url" }),
+  });
+  const { body } = await call("/api/products");
+  check("PUT cannot rewrite the slug", code === 200 && body.data.some((p) => p.id === SLUG) && !body.data.some((p) => p.id === "hijacked-url"), `code=${code}`);
+  await call(`/admin/products/${product.id}`, { method: "PUT", token, body: JSON.stringify({ name: "E2E Test Widget" }) });
+}
+
+// 4c. The admin can rewrite the customization fields.
+{
+  const { code } = await call(`/admin/products/${product.id}`, {
+    method: "PUT", token, body: JSON.stringify({ customizationFields: [{ label: "Colour", required: true, maxLength: 40 }] }),
+  });
+  const { body } = await call("/api/products");
+  const now = body.data.find((p) => p.id === SLUG);
+  check("PUT replaces the customization fields", code === 200 && now?.customizationFields?.length === 1 && now?.customizationFields[0].label === "Colour", `code=${code}`);
+  await call(`/admin/products/${product.id}`, { method: "PUT", token, body: JSON.stringify({ customizationFields: product.customizationFields }) });
 }
 
 // 5. Clean up, and confirm it disappears from the public list.
@@ -118,17 +193,24 @@ const check = (label, cond, extra = "") =>
   const { code } = await call(`/admin/products/${product.id}`, { method: "DELETE", token });
   const { body } = await call("/api/products");
   check("DELETE removes the product", code === 200, `code=${code}`);
-  check("deleted product is gone from the public API", !body.data.some((p) => p.id === "e2e-test-widget"));
+  check("deleted product is gone from the public API", !body.data.some((p) => p.id === SLUG));
   check("DELETE returns no data key", !("data" in (await call(`/admin/products/${product.id}`, { method: "DELETE", token })).body));
 }
 
-// 6. The slugless admin-created product must stay hidden but survive.
+// 5b. The zero-customization product is cleaned up too.
+{
+  const { code } = await call(`/admin/products/${plainId}`, { method: "DELETE", token });
+  check("DELETE removes the plain product", code === 200, `code=${code}`);
+}
+
+// 6. The legacy slugless row (created before slugs were server-owned) must stay
+//    hidden from the public site but survive for the admin.
 {
   const { body: adminList } = await call("/admin/products", { token });
   const strays = adminList.data.filter((p) => !p.slug);
   const { body: pubList } = await call("/api/products");
-  check("admin still sees the slugless test product", strays.length === 1, `found ${strays.length}: ${strays.map((s) => s.name).join(", ")}`);
-  check("public API hides the slugless product", !pubList.data.some((p) => p.id === strays[0]?.id));
+  check("admin still sees the pre-slug test product", strays.length === 1, `found ${strays.length}: ${strays.map((s) => s.name).join(", ")}`);
+  check("public API hides it", !pubList.data.some((p) => p.id === strays[0]?.id));
 }
 
 // ── public quote submission ───────────────────────────────────────────────────
@@ -140,15 +222,6 @@ const ip = `203.0.113.${Math.floor(Math.random() * 250) + 1}`;
 const asIp = (extra = {}) => ({ ...extra, headers: { "X-Forwarded-For": ip, ...extra.headers } });
 const quoteCount = async () => (await call("/admin/quotes", { token })).body.data.length;
 
-// 0. A crashed run leaks whatever it had created so far, which would then fail
-//    the count-based checks below on the next run. Every row this suite makes
-//    uses an @example.com address, so sweeping those makes the suite idempotent.
-{
-  const stale = (await call("/admin/quotes", { token })).body.data.filter((q) => q.email?.endsWith("@example.com"));
-  for (const q of stale) await call(`/admin/quotes/${q.id}`, { method: "DELETE", token });
-  if (stale.length) console.log(`swept ${stale.length} leftover quote(s) from a previous run`);
-}
-
 // 7. The happy path, with every field the two public forms actually collect.
 let quoteId = null;
 {
@@ -159,11 +232,13 @@ let quoteId = null;
       name: "E2E Customer",
       email: "e2e-customer@example.com",
       phone: "9800000000",
+      // Deliberately NOT product-scoped: the fixture product was deleted in check
+      // 5, and a slug naming a product that no longer exists is a 400 by design.
+      // The product-scoped path (size, required fields) is check 8b.
       product: "E2E Test Widget",
       size: "L",
       service: "Crystal Awards",
       quantity: "25",
-      engrave: "Presented to E2E — 2026",
       attachment: "e2e-logo.png",
       message: "Please quote 25 units.",
     }),
@@ -175,7 +250,8 @@ let quoteId = null;
   const row = (await call("/admin/quotes", { token })).body.data.find((q) => q.id === quoteId);
   check("quote row is visible to the admin", Boolean(row));
   check("status is server-owned and starts as new", row?.status === "new", `status=${row?.status}`);
-  check("all form fields persisted", row?.service === "Crystal Awards" && row?.quantity === "25" && row?.engrave === "Presented to E2E — 2026" && row?.attachment === "e2e-logo.png" && row?.product === "E2E Test Widget" && row?.size === "L" && row?.message === "Please quote 25 units.");
+  check("all form fields persisted", row?.service === "Crystal Awards" && row?.quantity === "25" && row?.attachment === "e2e-logo.png" && row?.product === "E2E Test Widget" && row?.size === "L" && row?.message === "Please quote 25 units.");
+  check("a quote with no productSlug stores no customization", row?.customization?.length === 0 && row?.productSlug === "", JSON.stringify(row?.customization));
   check("quote has a server-set createdAt", Boolean(row?.createdAt) && new Date(row.createdAt).getTime() <= Date.now() + 5000, `createdAt=${row?.createdAt}`);
 }
 
@@ -185,6 +261,97 @@ let quoteId = null;
   check("POST /api/quotes rejects a missing email", code === 400 && Boolean(body.errors?.email), `code=${code}`);
   const bad = await call("/api/quotes", asIp({ method: "POST", body: JSON.stringify({ name: "Bad", email: "not-an-email" }) }));
   check("POST /api/quotes rejects a malformed email", bad.code === 400 && Boolean(bad.body.errors?.email), `code=${bad.code}`);
+}
+
+// 8b. The product-scoped rules must be enforced by the server, not just by the
+//     browser. The test product was deleted in check 5, so it is recreated here
+//     purely to hang the rules off.
+let rulesSlug = null;
+{
+  const { body } = await call("/admin/products", { method: "POST", token, body: JSON.stringify(product) });
+  rulesSlug = body.data?.slug ?? null;
+  check("fixture product for the quote rules exists", Boolean(rulesSlug), `slug=${rulesSlug}`);
+
+  // A different IP from the rest of the suite: these checks spend ten POSTs on
+  // their own, which is the whole of the 10/hour quote budget, and the limiter
+  // buckets per IP.
+  const rulesIp = `198.51.100.${Math.floor(Math.random() * 250) + 1}`;
+  const base = { name: "Rules", email: "rules@example.com", productSlug: rulesSlug };
+  const post = (extra) => call("/api/quotes", { ...asIp({ method: "POST", body: JSON.stringify({ ...base, ...extra }) }), headers: { "X-Forwarded-For": rulesIp } });
+
+  const noSize = await post({ customization: [{ label: "Recipient name", value: "A" }] });
+  check("a product with sizes rejects a quote with no size", noSize.code === 400 && Boolean(noSize.body.errors?.size), `code=${noSize.code} errors=${JSON.stringify(noSize.body.errors)}`);
+
+  const fakeSize = await post({ size: "Enormous", customization: [{ label: "Recipient name", value: "A" }] });
+  check("an invented size is rejected, not stored", fakeSize.code === 400 && Boolean(fakeSize.body.errors?.size), `code=${fakeSize.code}`);
+
+  const noRequired = await post({ size: "L" });
+  check("a missing required customization field is rejected", noRequired.code === 400 && Boolean(noRequired.body.errors?.["customization.Recipient name"]), `code=${noRequired.code} errors=${JSON.stringify(noRequired.body.errors)}`);
+
+  const blankRequired = await post({ size: "L", customization: [{ label: "Recipient name", value: "   " }] });
+  check("a whitespace-only answer counts as missing", blankRequired.code === 400 && Boolean(blankRequired.body.errors?.["customization.Recipient name"]), `code=${blankRequired.code}`);
+
+  // A spoofed label list must not be able to SATISFY a required field. The server
+  // reads the product's own definition rather than the posted labels, so the 400 is
+  // keyed on the field the product really requires and the invented label is never
+  // stored. Asserting the error KEY is what makes this test honest: a bare `400`
+  // would also pass if the only reason for the refusal were the invented label.
+  const spoofed = await post({ size: "L", customization: [{ label: "Admin never asked for this", value: "x" }] });
+  check("a spoofed label list cannot satisfy a required field", spoofed.code === 400 && Boolean(spoofed.body.errors?.["customization.Recipient name"]), `code=${spoofed.code} errors=${JSON.stringify(spoofed.body.errors)}`);
+
+  const optionalOk = await post({ size: "L", customization: [{ label: "Recipient name", value: "Asha" }] });
+  check("an omitted optional field is fine", optionalOk.code === 201, `code=${optionalOk.code} ${optionalOk.body.message ?? ""}`);
+
+  const stored = (await call("/admin/quotes", { token })).body.data.find((q) => q.id === optionalOk.body.data?.id);
+  check("an omitted optional field is stored as empty, not invented", stored?.customization?.length === 2 && stored?.customization?.[1]?.value === "", JSON.stringify(stored?.customization));
+  await call(`/admin/quotes/${stored.id}`, { method: "DELETE", token });
+
+  // An over-long answer is truncated rather than rejected — a nuisance, not an attack.
+  const long = await post({ size: "L", customization: [{ label: "Recipient name", value: "x".repeat(400) }] });
+  const longRow = (await call("/admin/quotes", { token })).body.data.find((q) => q.id === long.body.data?.id);
+  check("an answer over the field's maxLength is truncated, not refused", long.code === 201 && longRow?.customization?.[0]?.value?.length === 80, `code=${long.code} len=${longRow?.customization?.[0]?.value?.length}`);
+  await call(`/admin/quotes/${longRow.id}`, { method: "DELETE", token });
+
+  // A field the admin deleted between page load and submit is dropped silently:
+  // that is the admin's edit, not the customer's mistake.
+  const stale = await post({ size: "L", customization: [{ label: "Recipient name", value: "Bikram" }, { label: "Removed since", value: "old" }] });
+  const staleRow = (await call("/admin/quotes", { token })).body.data.find((q) => q.id === stale.body.data?.id);
+  check("an answer to a since-deleted field is dropped, not stored", stale.code === 201 && !JSON.stringify(staleRow?.customization).includes("Removed since"), `code=${stale.code} ${JSON.stringify(staleRow?.customization)}`);
+  await call(`/admin/quotes/${staleRow.id}`, { method: "DELETE", token });
+
+  const unknownProduct = await post({ productSlug: "no-such-product-xyz" });
+  check("a quote for a product that no longer exists is rejected", unknownProduct.code === 400 && Boolean(unknownProduct.body.errors?.product), `code=${unknownProduct.code}`);
+
+  // The general contact form posts no slug, so it must be entirely unaffected.
+  const general = await call("/api/quotes", { ...asIp({ method: "POST", body: JSON.stringify({ name: "General", email: "general@example.com", message: "Just a question." }) }), headers: { "X-Forwarded-For": rulesIp } });
+  check("a general enquiry with no productSlug is unaffected", general.code === 201, `code=${general.code} ${general.body.message ?? ""}`);
+  const generalRow = (await call("/admin/quotes", { token })).body.data.find((q) => q.id === general.body.data?.id);
+  check("a general enquiry stores no customization and no size requirement", generalRow?.customization?.length === 0 && generalRow?.size === "");
+  await call(`/admin/quotes/${generalRow.id}`, { method: "DELETE", token });
+
+  // The real form is multipart, so the answers arrive as one JSON string rather
+  // than a JSON array. Reading only the array shape silently loses every answer
+  // and then reports it as a missing required field, which is exactly the bug
+  // this check exists to prevent.
+  const multipart = await callForm(
+    "/api/quotes",
+    artworkForm({
+      name: "Multipart",
+      email: "multipart@example.com",
+      productSlug: rulesSlug,
+      size: "S",
+      customization: JSON.stringify([
+        { label: "Recipient name", value: "Sita" },
+        { label: "Engraving note", value: "Best teacher" },
+      ]),
+    }),
+    // A third IP: the rules bucket above is already spent by check 8b's ten
+    // POSTs, which is the whole per-hour quote budget.
+    { headers: { "X-Forwarded-For": `198.51.100.${200 + Math.floor(Math.random() * 40)}` } }
+  );
+  const mpRow = (await call("/admin/quotes", { token })).body.data.find((q) => q.email === "multipart@example.com");
+  check("a multipart quote keeps its customization answers", multipart.code === 201 && mpRow?.customization?.length === 2 && mpRow?.customization?.[0]?.value === "Sita", `code=${multipart.code} ${multipart.body.message ?? ""} ${JSON.stringify(mpRow?.customization)}`);
+  if (mpRow) await call(`/admin/quotes/${mpRow.id}`, { method: "DELETE", token });
 }
 
 // 9. A client must not be able to set status or backdate its own quote.
@@ -270,7 +437,10 @@ let quoteId = null;
 // the three things that can silently orphan them: a rename that doesn't follow
 // through, a delete that doesn't strip, and a `cat` the schema still demands.
 const CAT = "E2E Test Category";
-const CAT_SLUG = "e2e-cat-widget";
+const CAT_NAME = "E2E Category Widget";
+// The slug is derived from the name by the server now, so the checks below must
+// derive it the same way rather than pinning it in a POST body.
+const CAT_SLUG = CAT_NAME.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 let catId = null;
 let widgetId = null;
 
@@ -322,7 +492,7 @@ let widgetId = null;
   const doc = (await call("/api/categories")).body.data.find((c) => c.name === `${CAT} Renamed`);
   check("PUT /admin/categories renames", code === 200 && Boolean(doc), `code=${code}`);
 
-  const made = await call("/admin/products", { method: "POST", token, body: JSON.stringify({ slug: CAT_SLUG, name: "E2E Category Widget", desc: "created by the e2e check", cat: `${CAT} Renamed` }) });
+  const made = await call("/admin/products", { method: "POST", token, body: JSON.stringify({ name: CAT_NAME, desc: "created by the e2e check", cat: `${CAT} Renamed` }) });
   check("a product can be filed under a new category", made.code === 201, `code=${made.code} ${made.body.message ?? ""}`);
   widgetId = made.body.data?.id ?? null;
 
@@ -349,7 +519,7 @@ let widgetId = null;
 // 21. `cat` is optional now, so an uncategorized product is a first-class thing
 //     rather than a validation error.
 {
-  const { code, body } = await call("/admin/products", { method: "POST", token, body: JSON.stringify({ slug: "e2e-no-cat", name: "E2E No Category", desc: "created by the e2e check" }) });
+  const { code, body } = await call("/admin/products", { method: "POST", token, body: JSON.stringify({ name: "E2E No Category", desc: "created by the e2e check" }) });
   check("a product can be created with no category", code === 201 && body.data?.cat === "", `code=${code} ${body.message ?? ""}`);
   await call(`/admin/products/${body.data?.id}`, { method: "DELETE", token });
 }
@@ -471,24 +641,24 @@ const findSub = async () =>
   const { code, body } = await call("/admin/products", {
     method: "POST",
     token,
-    body: JSON.stringify({ slug: "e2e-newsletter-widget", name: "E2E Newsletter Widget", desc: "created by the e2e broadcast check" }),
+    body: JSON.stringify({ name: "E2E Newsletter Widget", desc: "created by the e2e broadcast check" }),
   });
   check("product create still 201s with an active subscriber", code === 201, `code=${code} ${body.message ?? ""}`);
   await call(`/admin/products/${body.data?.id}`, { method: "DELETE", token });
 }
 
-// 23.9 The broadcast skips any product with no slug, because the link in the
-//       email would have nowhere to go. The admin API already refuses to create
-//       one (slug is required), which is why that guard is belt-and-braces —
-//       but the seeded "test product 1" row is exactly the slugless case, so the
-//       guard is not dead code.
+// 23.9 Every product now gets a server-generated slug, so a new product always
+//       has a public page to link the broadcast to. The broadcast's own
+//       slug guard remains for the one legacy row that predates this (the
+//       seeded "test product 1"), which is why it is not dead code.
 {
   const { code, body } = await call("/admin/products", {
     method: "POST",
     token,
-    body: JSON.stringify({ name: "E2E No Slug", desc: "no slug, so no broadcast" }),
+    body: JSON.stringify({ name: "E2E Auto Slug Widget", desc: "slug comes from the name" }),
   });
-  check("a product with no slug is rejected", code === 400 && Boolean(body.errors?.slug), `code=${code} ${JSON.stringify(body.errors ?? null)}`);
+  check("a product created with no slug gets one derived from its name", code === 201 && body.data?.slug === "e2e-auto-slug-widget", `code=${code} slug=${body.data?.slug}`);
+  await call(`/admin/products/${body.data?.id}`, { method: "DELETE", token });
 }
 
 // 23.10 Unsubscribing is idempotent, and it survives a token that has already
@@ -578,13 +748,6 @@ const PNG = Buffer.from(
   "base64"
 );
 
-const artworkForm = (fields, file) => {
-  const form = new FormData();
-  for (const [k, v] of Object.entries(fields)) form.append(k, v);
-  if (file) form.append("artwork", new Blob([file.bytes], { type: file.type }), file.name);
-  return form;
-};
-
 // 25. A real image is uploaded, stored, and actually served back.
 let artworkUrl = null;
 let artworkId = null;
@@ -652,11 +815,13 @@ let artworkId = null;
   check("DELETE /admin/quotes with artwork is 200", del.code === 200, `code=${del.code}`);
   check("the quote row is gone", !(await call("/admin/quotes", { token })).body.data.some((q) => q.id === artworkId));
 
-  // The CDN can take a moment to drop a destroyed asset, so retry briefly.
+  // The CDN can take a moment to drop a destroyed asset, so retry briefly. The
+  // window has to be genuinely generous (up to ~30s): at 12s this check failed
+  // against a correctly-deleted asset while a later fetch of the same URL 404'd.
   let destroyed = false;
-  for (let i = 0; i < 8 && !destroyed; i += 1) {
+  for (let i = 0; i < 15 && !destroyed; i += 1) {
     destroyed = artworkUrl ? (await fetch(artworkUrl)).status === 404 : true;
-    if (!destroyed) await new Promise((r) => setTimeout(r, 1500));
+    if (!destroyed) await new Promise((r) => setTimeout(r, 2000));
   }
   check("deleting the quote destroyed the Cloudinary asset", destroyed);
 }
@@ -664,7 +829,14 @@ let artworkId = null;
 // 24. Cleanup, so a re-run starts from the same state.
 {
   await call(`/admin/products/${widgetId}`, { method: "DELETE", token });
-  const left = (await call("/admin/products", { token })).body.data.filter((p) => p.slug === CAT_SLUG || p.slug === "e2e-no-cat" || p.slug === "e2e-newsletter-widget");
+  // The rules fixture from check 8b is the product still carrying the required
+  // customization field, so it has to go too or check 2's slug suffix shifts.
+  const leftovers = (await call("/admin/products", { token })).body.data;
+  const fixture = leftovers.find((p) => p.name === "E2E Test Widget");
+  if (fixture) await call(`/admin/products/${fixture.id}`, { method: "DELETE", token });
+  const left = (await call("/admin/products", { token })).body.data.filter(
+    (p) => p.slug === CAT_SLUG || p.slug === "e2e-no-category" || p.slug === "e2e-newsletter-widget"
+  );
   check("e2e category fixtures cleaned up", left.length === 0, `left ${left.map((p) => p.slug).join(", ")}`);
   const subs = (await call("/admin/subscribers", { token })).body.data.filter((s) => s.email?.endsWith("@example.com"));
   check("e2e subscriber fixtures cleaned up", subs.length === 0, `left ${subs.map((s) => s.email).join(", ")}`);

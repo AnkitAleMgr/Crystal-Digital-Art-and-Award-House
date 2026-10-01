@@ -96,6 +96,10 @@ export const adminRegister = async (req, res) => {
   }
 };
 
+
+
+
+
 export const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;

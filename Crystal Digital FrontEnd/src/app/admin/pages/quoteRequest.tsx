@@ -50,7 +50,7 @@ export function AdminQuotes() {
         "service",
         "size",
         "quantity",
-        "engrave",
+        "customization",
         "attachment",
         "artwork_url",
         "message",
@@ -66,7 +66,12 @@ export function AdminQuotes() {
         q.service,
         q.size,
         q.quantity,
-        q.engrave,
+        // One "label: value" per line in a single cell, so a spreadsheet keeps a
+        // fixed column count while still carrying every structured answer. The
+        // CSV writer quotes it, so the newlines and colons are safe.
+        (q.customization ?? [])
+          .map((c) => `${c.label}: ${c.value}`)
+          .join("\n"),
         q.attachment,
         q.attachmentUrl,
         q.message,
@@ -244,10 +249,17 @@ export function AdminQuotes() {
                 )}
               </div>
             </div>
-            {viewing.engrave && (
+            {(viewing.customization ?? []).length > 0 && (
               <div>
-                <div className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Text to Engrave / Special Instructions</div>
-                <p className="text-gray-700 text-sm leading-relaxed bg-gray-50 rounded-xl p-4 whitespace-pre-wrap">{viewing.engrave}</p>
+                <div className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Customer Details</div>
+                <div className="space-y-2">
+                  {viewing.customization.map((c, i) => (
+                    <div key={i} className="bg-gray-50 rounded-xl p-4">
+                      <div className="text-xs font-semibold text-gray-500 mb-1">{c.label}</div>
+                      <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{c.value || <span className="text-gray-400 italic">Not provided</span>}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             {viewing.attachment && (

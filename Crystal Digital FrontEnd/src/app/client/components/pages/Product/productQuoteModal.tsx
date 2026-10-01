@@ -30,7 +30,12 @@ export function QuoteModal({
     phone: "",
     email: "",
     quantity: "",
-    engrave: "",
+    // One entry per product customizationField, keyed by label. Seeded from the
+    // product so a field the admin has since removed simply never renders, and
+    // one added after this page loaded is caught server-side rather than lost.
+    customization: Object.fromEntries(
+      product.customizationFields.map((f) => [f.label, ""])
+    ),
     size: initialSize || "",
     website: "",
   });
@@ -61,6 +66,34 @@ export function QuoteModal({
       return;
     }
 
+    // The browser's own required handling covers these, but an empty-value
+    // custom field and a blank size would otherwise leave a confusing message
+    // for the server to reject.
+    const missing = product.customizationFields.filter(
+      (f) => f.required && !(form.customization[f.label] ?? "").trim()
+    );
+
+    if (missing.length > 0) {
+      setFieldErrors(
+        Object.fromEntries(
+          missing.map((f) => [
+            `customization.${f.label}`,
+            `${f.label} is required.`,
+          ])
+        )
+      );
+      setSendError("Please fill in every required field.");
+      setSending(false);
+      return;
+    }
+
+    if (product.sizes.length > 0 && !form.size) {
+      setFieldErrors({ size: "Please choose a size." });
+      setSendError("Please choose a size.");
+      setSending(false);
+      return;
+    }
+
     try {
       await publicApi.createQuote(
         {
@@ -68,9 +101,13 @@ export function QuoteModal({
           email: form.email,
           phone: form.phone,
           product: product.name,
+          productSlug: product.slug,
           size: form.size,
           quantity: form.quantity,
-          engrave: form.engrave,
+          customization: product.customizationFields.map((f) => ({
+            label: f.label,
+            value: form.customization[f.label] ?? "",
+          })),
           attachment: fileName,
           website: form.website,
         },
@@ -258,23 +295,7 @@ export function QuoteModal({
                 required.
               </p>
 
-              {/* Selected size display */}
-              {form.size && (
-                <div
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                  style={{ background: "#EFF6FF", border: "1.5px solid #BFDBFE" }}
-                >
-                  <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "#2563EB" }}>
-                    Selected Size
-                  </span>
-                  <span
-                    className="ml-auto px-3 py-1 rounded-full text-xs font-bold text-white"
-                    style={{ background: "linear-gradient(135deg, #2563EB, #1D4ED8)" }}
-                  >
-                    {form.size}
-                  </span>
-                </div>
-              )}
+              
 
               {/* Name + Phone */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -473,36 +494,109 @@ export function QuoteModal({
                 </label>
               </div>
 
-              {/* Text to engrave */}
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
-                  Text to Engrave / Special Instructions
-                </label>
-                <textarea
-                  value={form.engrave}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      engrave: e.target.value,
-                    })
-                  }
-                  placeholder={`e.g. "Presented to Ramesh Sharma for Outstanding Achievement — 2026" or describe your design...`}
-                  rows={3}
-                  className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all resize-none"
-                  style={{
-                    background: "#F8FAFC",
-                    border: "1.5px solid #E2E8F0",
-                  }}
-                  onFocus={(e) =>
-                    (e.target.style.border =
-                      "1.5px solid #2563EB")
-                  }
-                  onBlur={(e) =>
-                    (e.target.style.border =
-                      "1.5px solid #E2E8F0")
-                  }
-                />
-              </div>
+              {/* Size — required whenever the product offers a choice */}
+              {product.sizes.length > 0 && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
+                    Size{" "}
+                    <span style={{ color: "#DC2626" }}>*</span>
+                  </label>
+                  <select
+                    required
+                    value={form.size}
+                    onChange={(e) =>
+                      setForm({ ...form, size: e.target.value })
+                    }
+                    className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
+                    style={{
+                      background: "#F8FAFC",
+                      border: fieldErrors.size
+                        ? "1.5px solid #FCA5A5"
+                        : "1.5px solid #E2E8F0",
+                    }}
+                  >
+                    <option value="">Choose a size…</option>
+                    {product.sizes.map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                  {fieldErrors.size && (
+                    <p className="mt-1.5 text-xs text-red-600">
+                      {fieldErrors.size}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Customization fields defined by the admin for this product */}
+              {product.customizationFields.map((field) => {
+                const value = form.customization[field.label] ?? "";
+                const error = fieldErrors[`customization.${field.label}`];
+                const over = value.length > field.maxLength;
+
+                return (
+                  <div key={field.label}>
+                    <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
+                      {field.label}{" "}
+                      {field.required ? (
+                        <span style={{ color: "#DC2626" }}>*</span>
+                      ) : (
+                        <span className="font-normal normal-case text-gray-400">
+                          (optional)
+                        </span>
+                      )}
+                    </label>
+                    <textarea
+                      required={field.required}
+                      value={value}
+                      maxLength={field.maxLength}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          customization: {
+                            ...form.customization,
+                            [field.label]: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder={`Enter ${field.label.toLowerCase()}`}
+                      rows={2}
+                      className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all resize-none"
+                      style={{
+                        background: "#F8FAFC",
+                        border: error
+                          ? "1.5px solid #FCA5A5"
+                          : "1.5px solid #E2E8F0",
+                      }}
+                      onFocus={(e) =>
+                        (e.target.style.border =
+                          "1.5px solid #2563EB")
+                      }
+                      onBlur={(e) =>
+                        (e.target.style.border =
+                          "1.5px solid #E2E8F0")
+                      }
+                    />
+                    <div className="flex justify-between mt-1">
+                      {error ? (
+                        <p className="text-xs text-red-600">{error}</p>
+                      ) : (
+                        <span />
+                      )}
+                      <span
+                        className="text-xs ml-auto"
+                        style={{
+                          color: over ? "#DC2626" : "#9CA3AF",
+                        }}
+                      >
+                        {value.length}/{field.maxLength}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
 
               {/* Submit */}
               <div

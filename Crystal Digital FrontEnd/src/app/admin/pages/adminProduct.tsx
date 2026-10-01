@@ -7,19 +7,11 @@ import { Input } from "../components/ui/input";
 import { Modal } from "../components/ui/modal";
 import { Textarea } from "../components/ui/Textarea";
 import { useAdmin } from "../components/layout/adminProvider";
-import { Pencil, Plus, Search, Tag, Trash2, X, AlertCircle, Loader2 } from "lucide-react";
+import { Asterisk, Pencil, Plus, Search, Tag, Trash2, X, AlertCircle, Loader2 } from "lucide-react";
 
 // ── Products Panel ────────────────────────────────────────────────────────────
-function slugify(name: string) {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 function emptyProduct(): Omit<AdminProduct, "id"> {
-  return { slug: "", name: "", desc: "", fullDesc: "", cat: "", features: [], specs: [], customizable: [], tags: [], sizes: [], imgUrl: "", imgPublicId: "" };
+  return { slug: "", name: "", desc: "", fullDesc: "", cat: "", features: [], specs: [], customizationFields: [], tags: [], sizes: [], imgUrl: "", imgPublicId: "" };
 }
 
 function ProductModal({
@@ -31,22 +23,40 @@ function ProductModal({
   onSave: (p: Omit<AdminProduct, "id">) => void;
   onClose: () => void;
 }) {
-  const [form, setForm] = useState<Omit<AdminProduct, "id">>(initial ? { ...initial, slug: initial.slug ?? "", sizes: initial.sizes ?? [] } : emptyProduct());
+  const [form, setForm] = useState<Omit<AdminProduct, "id">>(initial ? { ...initial, slug: initial.slug ?? "", sizes: initial.sizes ?? [], customizationFields: initial.customizationFields ?? [] } : emptyProduct());
   const [featInput, setFeatInput] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [customInput, setCustomInput] = useState("");
   const [sizeInput, setSizeInput] = useState("");
   const [specLabel, setSpecLabel] = useState("");
   const [specVal, setSpecVal] = useState("");
-  const [slugTouched, setSlugTouched] = useState(Boolean(initial?.slug));
 
-  function addItem(field: "features" | "customizable", val: string, setter: (v: string) => void) {
+  function addItem(field: "features", val: string, setter: (v: string) => void) {
     if (!val.trim()) return;
     setForm((f) => ({ ...f, [field]: [...f[field], val.trim()] }));
     setter("");
   }
-  function removeItem(field: "features" | "customizable", idx: number) {
+  function removeItem(field: "features", idx: number) {
     setForm((f) => ({ ...f, [field]: f[field].filter((_, i) => i !== idx) }));
+  }
+
+  function addCustomField() {
+    const label = customInput.trim();
+    if (!label) return;
+    setForm((f) => ({
+      ...f,
+      customizationFields: [...f.customizationFields, { label, required: true, maxLength: 300 }],
+    }));
+    setCustomInput("");
+  }
+  function patchCustomField(idx: number, patch: Partial<AdminProduct["customizationFields"][number]>) {
+    setForm((f) => ({
+      ...f,
+      customizationFields: f.customizationFields.map((c, i) => (i === idx ? { ...c, ...patch } : c)),
+    }));
+  }
+  function removeCustomField(idx: number) {
+    setForm((f) => ({ ...f, customizationFields: f.customizationFields.filter((_, i) => i !== idx) }));
   }
   function addTag() {
     if (!tagInput.trim()) return;
@@ -63,23 +73,14 @@ function ProductModal({
     <Modal title={initial ? "Edit Product" : "Add New Product"} onClose={onClose}>
       <div className="space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Product Name *" value={form.name} onChange={(e) => { const name = e.target.value; setForm((f) => ({ ...f, name, slug: slugTouched ? f.slug : slugify(name) })); }} placeholder="e.g. Crystal Award" required />
+          <Input label="Product Name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Crystal Award" required />
           <CategorySelect label="Category" value={form.cat} onChange={(cat) => setForm({ ...form, cat })} />
         </div>
-        <Input
-          label="URL Slug *"
-          value={form.slug}
-          onChange={(e) => {
-            setSlugTouched(true);
-            setForm({ ...form, slug: e.target.value });
-          }}
-          placeholder="crystal-award"
-          required
-        />
-        <p className="-mt-3 text-xs text-gray-400">
-          Public page: /products/{form.slug || "…"} — products without a slug are
-          not shown on the website.
-        </p>
+        {initial && (
+          <p className="-mt-3 text-xs text-gray-400">
+            Public page: /products/{initial.slug}
+          </p>
+        )}
         <Input label="Short Description *" value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} placeholder="Brief product description" required />
         <Textarea label="Full Description" value={form.fullDesc} onChange={(e) => setForm({ ...form, fullDesc: e.target.value })} rows={4} placeholder="Detailed product description..." />
         <ImageUploadField label="Product Image" folder="products" value={form.imgUrl} onChange={(url, publicId) => setForm({ ...form, imgUrl: url, imgPublicId: publicId ?? "" })} />
@@ -119,19 +120,65 @@ function ProductModal({
           </div>
         </div>
 
-        {/* Customizable */}
+        {/* Customization fields */}
         <div>
-          <label className="text-sm font-semibold text-gray-700 block mb-2">Customization Options</label>
+          <label className="text-sm font-semibold text-gray-700 block mb-1">Required Information from Customer</label>
+          <p className="text-xs text-gray-500 mb-2">
+            Each one becomes a field the customer must fill in when they request a
+            quote for this product. Leave empty for a product that needs nothing
+            special.
+          </p>
           <div className="flex gap-2 mb-2">
-            <input value={customInput} onChange={(e) => setCustomInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addItem("customizable", customInput, setCustomInput))} placeholder="Add option..." className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
-            <button onClick={() => addItem("customizable", customInput, setCustomInput)} className="px-3 py-2 rounded-lg text-white text-sm" style={{ background: "#2563EB" }}><Plus size={16} /></button>
+            <input
+              value={customInput}
+              onChange={(e) => setCustomInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addCustomField();
+                }
+              }}
+              placeholder="e.g. Recipient's name"
+              className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            />
+            <button onClick={addCustomField} className="px-3 py-2 rounded-lg text-white text-sm" style={{ background: "#2563EB" }}><Plus size={16} /></button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {form.customizable.map((c, i) => (
-              <span key={i} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs bg-green-50 text-green-700 border border-green-100">
-                {c} <button onClick={() => removeItem("customizable", i)}><X size={12} /></button>
-              </span>
+          <div className="space-y-2">
+            {form.customizationFields.map((c, i) => (
+              <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-green-50 border border-green-100">
+                <input
+                  value={c.label}
+                  onChange={(e) => patchCustomField(i, { label: e.target.value })}
+                  placeholder="Field name"
+                  className="flex-1 px-2 py-1 rounded-md border border-green-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                />
+                <label className="flex items-center gap-1.5 text-xs font-medium text-green-800 whitespace-nowrap cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={c.required}
+                    onChange={(e) => patchCustomField(i, { required: e.target.checked })}
+                    className="w-3.5 h-3.5 accent-green-700"
+                  />
+                  Required
+                </label>
+                <label className="flex items-center gap-1.5 text-xs font-medium text-green-800 whitespace-nowrap cursor-pointer select-none">
+                  Max
+                  <input
+                    type="number"
+                    min={20}
+                    max={1000}
+                    step={20}
+                    value={c.maxLength}
+                    onChange={(e) => patchCustomField(i, { maxLength: Math.min(1000, Math.max(20, Number(e.target.value) || 300)) })}
+                    className="w-16 px-2 py-1 rounded-md border border-green-200 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  />
+                </label>
+                <button onClick={() => removeCustomField(i)}><X size={14} className="text-green-400 hover:text-red-500" /></button>
+              </div>
             ))}
+            {form.customizationFields.length === 0 && (
+              <p className="text-xs text-gray-400 italic">No fields added — customers will only be asked for the standard quote details.</p>
+            )}
           </div>
         </div>
 
@@ -253,10 +300,20 @@ export function AdminProducts() {
   async function handleSave(data: Omit<AdminProduct, "id">) {
     setSaving(true);
     try {
+      // A field whose name was added then cleared would fail the schema's
+      // `required` on label, so it is dropped here rather than bounced back as
+      // a 400 on a form the admin thinks they filled in correctly.
+      const payload = {
+        ...data,
+        customizationFields: data.customizationFields
+          .map((c) => ({ ...c, label: c.label.trim() }))
+          .filter((c) => c.label),
+      };
+
       if (editing) {
-        await updateProduct(editing.id, data);
+        await updateProduct(editing.id, payload);
       } else {
-        await createProduct(data);
+        await createProduct(payload);
       }
       setShowModal(false);
       setEditing(null);
