@@ -1,40 +1,50 @@
 import { Link } from "react-router-dom";
-import {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-} from "react";
+import { useState } from "react";
 import { ImageWithFallback } from "../../../components/figma/ImageWithFallback";
 import logo from "../../../../imports/image.png";
-import { Facebook, Instagram, MapPin, MessageCircle, Send } from "lucide-react";
+import { Facebook, Instagram, Loader2, MapPin, MessageCircle, Send } from "lucide-react";
 import { useSiteData } from "./siteDataProvider";
 import { whatsappLink } from "../../data/siteDefaults";
+import { PublicApiError, publicApi } from "../../utils/api";
 
+
+// "idle" | "invalid" is what the visitor typed; "network" is us not being
+// reachable. They used to share one state, so a dead server reported "Please
+// enter a valid email address" — which is both wrong and the reason nobody
+// could work out what was happening.
+type SubState = "idle" | "sending" | "sent" | "already" | "invalid" | "network";
 
 // ── FOOTER ────────────────────────────────────────────────────────────────────
 export function Footer() {
   const { settings } = useSiteData();
   const [email, setEmail] = useState("");
-  const [subState, setSubState] = useState<"idle" | "ok" | "dup" | "err">("idle");
+  const [subState, setSubState] = useState<SubState>("idle");
 
-  function handleSubscribe() {
-    const trimmed = email.trim().toLowerCase();
-    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setSubState("err");
+  async function handleSubscribe() {
+    const trimmed = email.trim();
+
+    // noValidate on the form, so this runs instead of the browser's own
+    // tooltip. Left on, the native bubble would swallow the submit and the
+    // aria-live region below would stay empty — the visitor would see an
+    // unstyled browser message in whatever wording their browser prefers.
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setSubState("invalid");
       return;
     }
+
+    setSubState("sending");
+
     try {
-      const existing: string[] = JSON.parse(localStorage.getItem("cdaah_subscribers") || "[]");
-      if (existing.includes(trimmed)) {
-        setSubState("dup");
-        return;
-      }
-      localStorage.setItem("cdaah_subscribers", JSON.stringify([...existing, trimmed]));
-      setSubState("ok");
+      const result = await publicApi.subscribe({ email: trimmed });
+
+      setSubState(result.alreadySubscribed ? "already" : "sent");
       setEmail("");
-    } catch {
-      setSubState("err");
+    } catch (error) {
+      // A 400 here is the server's own field message, which is the accurate one
+      // to show. Status 0 is the "never reached the server" sentinel.
+      setSubState(
+        error instanceof PublicApiError && error.status === 0 ? "network" : "invalid"
+      );
     }
   }
   return (
@@ -176,15 +186,26 @@ export function Footer() {
               Newsletter
             </h4>
             <p className="text-gray-400 text-sm mb-4 leading-relaxed">
-              Subscribe for updates and special offers.
+              Get an email when we add something new. Nothing else, and you can
+              unsubscribe from any one of them.
             </p>
-            <div className="flex gap-2">
+            <form
+              className="flex gap-2"
+              noValidate
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSubscribe();
+              }}
+            >
               <input
+                type="email"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setSubState("idle"); }}
-                onKeyDown={(e) => e.key === "Enter" && handleSubscribe()}
                 placeholder="your@email.com"
-                className="flex-1 px-3 py-2.5 rounded-xl text-sm outline-none"
+                aria-label="Email address for product updates"
+                autoComplete="email"
+                disabled={subState === "sending"}
+                className="flex-1 px-3 py-2.5 rounded-xl text-sm outline-none disabled:opacity-60"
                 style={{
                   background: "rgba(255,255,255,0.07)",
                   border: "1px solid rgba(255,255,255,0.1)",
@@ -192,25 +213,47 @@ export function Footer() {
                 }}
               />
               <button
-                onClick={handleSubscribe}
-                className="px-3 py-2.5 rounded-xl transition-all hover:scale-105"
+                type="submit"
+                disabled={subState === "sending"}
+                aria-label="Subscribe to product updates"
+                className="px-3 py-2.5 rounded-xl transition-all hover:scale-105 disabled:opacity-60 disabled:hover:scale-100"
                 style={{
                   background:
                     "linear-gradient(135deg, #2563EB, #1D4ED8)",
                 }}
               >
-                <Send size={14} className="text-white" />
+                {subState === "sending" ? (
+                  <Loader2 size={14} className="text-white animate-spin" />
+                ) : (
+                  <Send size={14} className="text-white" />
+                )}
               </button>
-            </div>
-            {subState === "ok" && (
-              <p className="text-green-400 text-xs mt-2">Subscribed! You'll receive product updates.</p>
-            )}
-            {subState === "dup" && (
-              <p className="text-yellow-400 text-xs mt-2">This email is already subscribed.</p>
-            )}
-            {subState === "err" && (
-              <p className="text-red-400 text-xs mt-2">Please enter a valid email address.</p>
-            )}
+            </form>
+            {/* aria-live so the result is announced — the whole point of the
+                form is the message that comes back. */}
+            <p aria-live="polite" className="mt-2 text-xs min-h-4">
+              {subState === "sent" && (
+                <span className="text-green-400">
+                  Almost done — check your inbox and click the link we just sent.
+                </span>
+              )}
+              {subState === "already" && (
+                <span className="text-yellow-400">
+                  You're already subscribed. We'll only email when something new
+                  is added.
+                </span>
+              )}
+              {subState === "invalid" && (
+                <span className="text-red-400">
+                  Please enter a valid email address.
+                </span>
+              )}
+              {subState === "network" && (
+                <span className="text-red-400">
+                  We couldn't reach the server. Please try again in a moment.
+                </span>
+              )}
+            </p>
             <div className="mt-5 flex items-start gap-2.5">
               <MapPin
                 size={14}

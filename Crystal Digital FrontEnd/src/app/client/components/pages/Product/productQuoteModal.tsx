@@ -20,7 +20,10 @@ export function QuoteModal({
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
+  const [fileSize, setFileSize] = useState(0);
+  const [fileTooBig, setFileTooBig] = useState(false);
   const { settings } = useSiteData();
   const [form, setForm] = useState({
     name: "",
@@ -32,8 +35,16 @@ export function QuoteModal({
     website: "",
   });
 
+  // 5MB, matching MAX_IMAGE_BYTES in the backend's middleware/imageUpload.js.
+  const MAX_ARTWORK_BYTES = 5 * 1024 * 1024;
+
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    setFileName(e.target.files?.[0]?.name ?? "");
+    const picked = e.target.files?.[0] ?? null;
+
+    setFile(picked);
+    setFileName(picked?.name ?? "");
+    setFileSize(picked?.size ?? 0);
+    setFileTooBig(Boolean(picked && picked.size > MAX_ARTWORK_BYTES));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -42,18 +53,29 @@ export function QuoteModal({
     setSendError("");
     setFieldErrors({});
 
+    if (fileTooBig) {
+      setSendError(
+        "That artwork is over 5MB. Please email it to us instead — your other details have not been sent."
+      );
+      setSending(false);
+      return;
+    }
+
     try {
-      await publicApi.createQuote({
-        name: form.name,
-        email: form.email,
-        phone: form.phone,
-        product: product.name,
-        size: form.size,
-        quantity: form.quantity,
-        engrave: form.engrave,
-        attachment: fileName,
-        website: form.website,
-      });
+      await publicApi.createQuote(
+        {
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          product: product.name,
+          size: form.size,
+          quantity: form.quantity,
+          engrave: form.engrave,
+          attachment: fileName,
+          website: form.website,
+        },
+        file
+      );
 
       setSent(true);
     } catch (error) {
@@ -435,13 +457,16 @@ export function QuoteModal({
                         "Click to upload logo or image"}
                     </p>
                     <p className="text-xs text-gray-400">
-                      We note the file name — email the artwork to us
-                      separately
+                      {fileTooBig
+                        ? "That file is over 5MB — please send it by email instead"
+                        : fileName
+                          ? `${(fileSize / 1024).toFixed(0)} KB · sent securely with your quote`
+                          : "JPG, PNG, WebP or AVIF, up to 5MB"}
                     </p>
                   </div>
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp,image/avif,image/gif"
                     className="hidden"
                     onChange={handleFile}
                   />

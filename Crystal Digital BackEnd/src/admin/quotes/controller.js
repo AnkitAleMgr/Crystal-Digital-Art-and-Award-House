@@ -4,7 +4,14 @@ import { notifyCustomerOfStatus } from "../../utils/notifications.js";
 
 export const getQuotes = getAll(QuoteModel);
 export const createQuote = createOne(QuoteModel);
-export const deleteQuote = deleteOne(QuoteModel);
+
+// withImages so deleting a quote also destroys its Cloudinary artwork, and
+// imageField because quotes name the column `attachmentPublicId`, not
+// `imgPublicId` like products and gallery do.
+export const deleteQuote = deleteOne(QuoteModel, {
+  withImages: true,
+  imageField: "attachmentPublicId",
+});
 
 // The generic crud updateOne() is not used for quotes. It cannot tell whether the
 // status actually changed, and the customer email has to be sent from the stored

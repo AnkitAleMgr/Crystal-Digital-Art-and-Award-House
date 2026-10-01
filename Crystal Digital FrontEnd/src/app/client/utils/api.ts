@@ -1,4 +1,9 @@
-import type { QuoteSubmission } from "../types/Public";
+import type {
+  QuoteSubmission,
+  SubscriberAck,
+  SubscriberResult,
+  SubscriberSubmission,
+} from "../types/Public";
 
 export const PUBLIC_API_BASE =
   import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
@@ -72,12 +77,44 @@ const post = <T>(path: string, body: unknown) =>
     body: JSON.stringify(body),
   });
 
+// No Content-Type header on purpose. The browser has to pick the multipart
+// boundary itself; setting the header by hand produces a body with no boundary
+// and the server cannot find any field.
+const postForm = <T>(path: string, form: FormData) =>
+  request<T>(path, { method: "POST", body: form });
+
 export const publicApi = {
   products: <T>() => get<T>("/products"),
   categories: <T>() => get<T>("/categories"),
   gallery: <T>() => get<T>("/gallery"),
   testimonials: <T>() => get<T>("/testimonials"),
   settings: <T>() => get<T>("/settings"),
-  createQuote: (body: QuoteSubmission) =>
-    post<{ id: string | null; createdAt: string }>("/quotes", body),
+  // Sent as multipart so the artwork rides along with the text fields in one
+  // request. Uploading the image first and posting the link afterwards would
+  // leave a file on Cloudinary every time someone attaches artwork and then
+  // abandons the form.
+  createQuote: (body: QuoteSubmission, artwork?: File | null) => {
+    const form = new FormData();
+
+    for (const [key, value] of Object.entries(body)) {
+      if (value !== undefined && value !== null && value !== "") {
+        form.append(key, String(value));
+      }
+    }
+
+    if (artwork) {
+      form.append("artwork", artwork);
+    }
+
+    return postForm<{ id: string | null; createdAt: string }>("/quotes", form);
+  },
+  subscribe: (body: SubscriberSubmission) =>
+    post<SubscriberAck>("/subscribers", body),
+  // These two take the signed token out of the email link. They are POSTs and
+  // not GETs on purpose: email clients auto-follow links with security scanners,
+  // so a GET would let a scanner confirm a subscription nobody clicked.
+  confirmSubscription: (token: string) =>
+    post<SubscriberResult>("/subscribers/confirm", { token }),
+  unsubscribe: (token: string) =>
+    post<SubscriberResult>("/subscribers/unsubscribe", { token }),
 };

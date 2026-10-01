@@ -1,12 +1,15 @@
 import { SettingModel } from "../admin/settings/model.js";
-import { ownerEmail, sendMail } from "./mailer.js";
+import { SubscriberModel } from "../admin/subscribers/model.js";
+import { isMailConfigured, ownerEmail, sendMail } from "./mailer.js";
+import { siteLink } from "./siteUrl.js";
+import { signSubscriberToken } from "./subscribeTokens.js";
 
-// The two emails this business sends, and the only two. They used to be built in
-// the React app and POSTed to formsubmit.co, which meant the customer email
-// addresses were shipped to a third party and never actually delivered (FormSubmit
-// answers 200 with "This form needs Activation" until each recipient clicks a
-// link — asking an enquirer to click an "Activate Form" link from a business
-// reads as phishing, so the feature was effectively dead).
+// Every email this business sends. They used to be built in the React app and
+// POSTed to formsubmit.co, which meant the customer email addresses were shipped
+// to a third party and never actually delivered (FormSubmit answers 200 with
+// "This form needs Activation" until each recipient clicks a link — asking an
+// enquirer to click an "Activate Form" link from a business reads as phishing,
+// so the feature was effectively dead).
 //
 // Everything is escaped: these bodies carry customer-supplied name/message text
 // and are rendered as HTML by the mail client.
@@ -26,7 +29,11 @@ const esc = (value) =>
 // run and Resend would try to deliver to addresses that can never receive mail.
 // This is checked against the *quote's* address, not the recipient, so it also
 // silences the owner alert. Real enquiries are unaffected.
-const isTestAddress = (email) => /@(example\.(com|net|org)|test|invalid)$/i.test(String(email ?? "").trim());
+//
+// Exported because the newsletter broadcast filters on it per recipient: the
+// e2e suite confirms an @example.com subscriber to "active" and then creates a
+// product, and that is exactly the case that must not send.
+export const isTestAddress = (email) => /@(example\.(com|net|org)|test|invalid)$/i.test(String(email ?? "").trim());
 
 const dash = (value, fallback = "Not specified") => {
   const text = String(value ?? "").trim();
@@ -118,9 +125,23 @@ export const notifyOwnerOfQuote = async (quote) => {
     row("Artwork file", esc(dash(quote.attachment, "No file attached"))),
   ];
 
+  // The raw Cloudinary URL, not deliveryUrl()'s f_auto,q_auto: this is the file
+  // the customer has to reproduce at print size, and optimising it here would
+  // hide exactly the detail that matters.
+  const artwork = quote.attachmentUrl
+    ? `<div style="margin:20px 0 0;padding:14px 16px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;font-size:14px;">
+         <strong style="color:#166534;">Artwork attached</strong><br />
+         <a href="${esc(quote.attachmentUrl)}" style="color:#2563EB;word-break:break-all;">${esc(quote.attachmentUrl)}</a>
+       </div>`
+    : quote.attachment
+      ? `<p style="margin:18px 0 0;font-size:13px;color:#B45309;">
+           The customer attached <strong>${esc(quote.attachment)}</strong>, but it was not stored — ask them to email it to you.
+         </p>`
+      : "";
+
   const html = layout(
     "New enquiry from the website",
-    `${table(rows)}${quote.message ? block(quote.message) : ""}
+    `${table(rows)}${artwork}${quote.message ? block(quote.message) : ""}
      <p style="margin:20px 0 0;font-size:12px;color:#9CA3AF;">
        Reply to this email to answer ${esc(quote.name)} directly.
      </p>`,
@@ -192,4 +213,176 @@ export const notifyCustomerOfStatus = async (quote) => {
     html,
     replyTo: ownerEmail() || undefined,
   });
+};
+
+// ── Newsletter ────────────────────────────────────────────────────────────────
+// Three things share the machinery below, and all three are about the same
+// promise: a subscriber can always stop the mail. The unsubscribe link is not a
+// nicety bolted on, it is the reason the list is allowed to exist.
+
+const UNSUBSCRIBE_PLACEHOLDER = "%%UNSUBSCRIBE_URL%%";
+
+const button = (href, text) => `
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:22px 0 0;">
+    <tr><td style="border-radius:8px;background:linear-gradient(135deg,#2563EB,#1D4ED8);">
+      <a href="${esc(href)}" style="display:inline-block;padding:12px 26px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:8px;">
+        ${esc(text)}
+      </a>
+    </td></tr>
+  </table>`;
+
+// `href` is built from SITE_URL plus a signed token, so it holds no
+// visitor-supplied text — but it is escaped anyway, because it lands in an
+// attribute and esc() turns & into &amp;, which is what an href wants.
+const unsubscribeNote = (url) => `
+  <p style="margin:24px 0 0;padding-top:16px;border-top:1px solid #E5E7EB;font-size:12px;color:#6B7280;line-height:1.7;">
+    You are receiving this because you subscribed to product updates.<br />
+    <a href="${esc(url)}" style="color:#2563EB;">Unsubscribe</a> if you would rather not hear from us.
+  </p>`;
+
+/**
+ * Double opt-in step one: the visitor left an address in the footer, and this is
+ * the mail that turns that address into a real subscriber. Nothing is broadcast
+ * to a `pending` row, so if this is never opened the list stays clean.
+ */
+export const notifySubscriberOfConfirmation = async (subscriber) => {
+  if (isTestAddress(subscriber?.email)) {
+    return { sent: false, reason: "test_address" };
+  }
+
+  // Without a token there is no way to confirm, so mailing a dead-end link would
+  // only teach people that our mail does not work.
+  const token = signSubscriberToken(subscriber.email, "confirm");
+
+  if (!token) {
+    return { sent: false, reason: "no_token_secret" };
+  }
+
+  const info = await business();
+  const href = siteLink(`/subscribe/confirm?token=${encodeURIComponent(token)}`);
+
+  const html = layout(
+    "One click and you're subscribed",
+    `<p style="margin:0 0 6px;font-size:15px;">Please confirm your subscription to product updates from ${esc(info.name)}.</p>
+     <p style="margin:0;font-size:14px;line-height:1.6;color:#4B5563;">
+       We only email when something new is added to the site. Nothing else, ever.
+     </p>
+     ${button(href, "Confirm my subscription")}
+     <p style="margin:18px 0 0;font-size:12px;color:#9CA3AF;">
+       If you did not request this, ignore this email — the address will not be
+       added to any list.
+     </p>`,
+    info
+  );
+
+  return sendMail({
+    to: subscriber.email,
+    subject: "Confirm your subscription",
+    html,
+    replyTo: ownerEmail() || undefined,
+  });
+};
+
+/**
+ * A new product was published, so every confirmed subscriber hears about it.
+ *
+ * Fire-and-forget from createProduct: the product is already saved, so a mail
+ * outage must not fail the admin's save. Nothing here throws.
+ *
+ * The body is identical for every recipient except the unsubscribe URL, so it is
+ * built once with a placeholder and substituted per send rather than re-templated
+ * per address.
+ */
+export const notifySubscribersOfProduct = async (product) => {
+  // Checked before the database read: with no key configured this is the common
+  // case during setup and there is no point querying for a list we cannot mail.
+  if (!isMailConfigured()) {
+    return { sent: 0, total: 0, skipped: "not_configured" };
+  }
+
+  // A product with no slug has no /products/:slug page, so the link below would
+  // 404. getPublicProducts filters those out of the site for the same reason.
+  if (!product?.slug) {
+    return { sent: 0, total: 0, skipped: "no_slug" };
+  }
+
+  let candidates;
+
+  try {
+    candidates = await SubscriberModel.find({ status: "active" })
+      .select("email")
+      .lean();
+  } catch (error) {
+    console.warn("[notifications] could not read subscribers:", error.message);
+    return { sent: 0, total: 0, skipped: "read_failed" };
+  }
+
+  const targets = candidates.filter((row) => row.email && !isTestAddress(row.email));
+
+  if (targets.length === 0) {
+    return { sent: 0, total: 0, skipped: "no_active_subscribers" };
+  }
+
+  const info = await business();
+  const productUrl = siteLink(`/products/${encodeURIComponent(product.slug)}`);
+
+  // The raw upload URL, not deliveryUrl()'s f_auto,q_auto: email clients do not
+  // send Accept: image/webp, and some still cannot render a WebP at all. The
+  // admin previews make the same trade.
+  const image = product.imgUrl
+    ? `<img src="${esc(product.imgUrl)}" alt="${esc(product.name)}" width="520" style="width:100%;max-width:520px;border-radius:10px;display:block;border:1px solid #E5E7EB;" />`
+    : "";
+
+  const template = layout(
+    `New: ${product.name}`,
+    `${image}
+     <p style="margin:18px 0 0;font-size:15px;line-height:1.6;">${esc(dash(product.desc, "We have just added a new product to our range."))}</p>
+     ${product.cat ? `<p style="margin:10px 0 0;font-size:12px;color:#6B7280;">Category: ${esc(product.cat)}</p>` : ""}
+     ${button(productUrl, "View this product")}
+     ${product.fullDesc ? block(product.fullDesc) : ""}
+     ${unsubscribeNote(UNSUBSCRIBE_PLACEHOLDER)}`,
+    info
+  );
+
+  let sent = 0;
+  let skippedNoToken = 0;
+
+  // Sequential on purpose. Resend rate-limits by requests/second, and this runs
+  // after the admin's save has already been answered, so there is nothing to
+  // gain from racing. A list in the thousands wants emails.batch() instead.
+  for (const row of targets) {
+    const token = signSubscriberToken(row.email, "unsubscribe");
+
+    // Never send a recipient a message they cannot opt out of.
+    if (!token) {
+      skippedNoToken += 1;
+      continue;
+    }
+
+    const url = siteLink(`/unsubscribe?token=${encodeURIComponent(token)}`);
+
+    const result = await sendMail({
+      to: row.email,
+      subject: `New on the site — ${product.name}`,
+      html: template.split(UNSUBSCRIBE_PLACEHOLDER).join(url),
+      // RFC 8058: this is what puts a native "Unsubscribe" link next to the
+      // sender in Gmail and Outlook, so they never have to find ours.
+      headers: {
+        "List-Unsubscribe": `<${url}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+    });
+
+    if (result.sent) {
+      sent += 1;
+    }
+  }
+
+  console.log(
+    `[notifications] broadcast "${product.name}": ${sent}/${targets.length} sent${
+      skippedNoToken ? `, ${skippedNoToken} skipped (no token secret)` : ""
+    }`
+  );
+
+  return { sent, total: targets.length, skippedNoToken };
 };

@@ -27,28 +27,31 @@ export const fail = (res, error, status = 500) => {
   return res.status(status).json({ status: false, message: error.message });
 };
 
-const releaseImage = async (doc) => {
-  if (!doc?.imgPublicId) {
+// Products and gallery store the Cloudinary public id in `imgPublicId`; quotes
+// name theirs `attachmentPublicId`. The field is a parameter rather than hardcoded
+// so both resources share this one function.
+const releaseImage = async (doc, imageField = "imgPublicId") => {
+  if (!doc?.[imageField]) {
     return;
   }
 
-  const result = await deleteImage(doc.imgPublicId);
+  const result = await deleteImage(doc[imageField]);
 
   if (result?.error) {
-    console.error(`Could not delete image ${doc.imgPublicId}:`, result.error);
+    console.error(`Could not delete image ${doc[imageField]}:`, result.error);
   }
 };
 
-const releaseReplacedImage = async (before, after) => {
-  if (!before?.imgPublicId) {
+const releaseReplacedImage = async (before, after, imageField) => {
+  if (!before?.[imageField]) {
     return;
   }
 
-  if (before.imgPublicId === after?.imgPublicId) {
+  if (before[imageField] === after?.[imageField]) {
     return;
   }
 
-  await releaseImage(before);
+  await releaseImage(before, imageField);
 };
 
 export const getAll = (Model) => async (req, res) => {
@@ -89,7 +92,7 @@ export const updateOne = (Model, options = {}) => async (req, res) => {
     }
 
     if (options.withImages) {
-      await releaseReplacedImage(before, doc);
+      await releaseReplacedImage(before, doc, options.imageField);
     }
 
     res.json({ status: true, data: mapDoc(doc) });
@@ -111,7 +114,7 @@ export const deleteOne = (Model, options = {}) => async (req, res) => {
     }
 
     if (options.withImages) {
-      await releaseImage(doc);
+      await releaseImage(doc, options.imageField);
     }
 
     res.json({ status: true, message: "Deleted" });

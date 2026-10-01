@@ -55,3 +55,25 @@ export interface QuoteSubmission {
   message?: string;
   website?: string;
 }
+
+/** The footer newsletter box. `website` is a honeypot — see QuoteSubmission. */
+export interface SubscriberSubmission {
+  email: string;
+  website?: string;
+}
+
+/**
+ * What POST /api/subscribers answers with. The row is stored as `pending` either
+ * way; `alreadySubscribed` is the one thing worth telling the visitor, so an
+ * address that is already confirmed is not told to go and check an inbox that
+ * will stay empty.
+ */
+export interface SubscriberAck {
+  id: string | null;
+  alreadySubscribed: boolean;
+}
+
+/** What the confirm / unsubscribe pages get back. */
+export interface SubscriberResult {
+  email: string;
+}

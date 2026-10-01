@@ -26,6 +26,26 @@ const call = async (path, opts = {}) => {
   return { code: res.status, body };
 };
 
+// call() always sends JSON, which cannot carry a file. This is the same request
+// with a real multipart body — note the absence of Content-Type, because the
+// runtime has to supply the multipart boundary itself.
+const callForm = async (path, form, opts = {}) => {
+  const res = await fetch(`${API}${path}`, {
+    method: "POST",
+    ...opts,
+    headers: { ...(opts.token ? { Authorization: `Bearer ${opts.token}` } : {}), ...opts.headers },
+    body: form,
+  });
+  const text = await res.text();
+  let body = null;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = { status: false, message: text.slice(0, 200) };
+  }
+  return { code: res.status, body };
+};
+
 await mongoose.connect(process.env.MONGO_DB_URI, { serverSelectionTimeoutMS: 15000 });
 const admin = await mongoose.connection.db.collection("admins").findOne({});
 if (!admin) throw new Error("no admin exists — cannot run e2e");
@@ -340,11 +360,314 @@ let widgetId = null;
   check("DELETE /admin/categories/:id with junk id is 404", (await call("/admin/categories/not-an-id", { method: "DELETE", token })).code === 404);
 }
 
-// 23. Cleanup, so a re-run starts from the same state.
+// 23. The newsletter. Every address here is @example.com, which isTestAddress()
+//     in notifications.js filters out of every send — so this whole section runs
+//     with a real RESEND_API_KEY configured and still mails nobody. That is the
+//     point of the guard, and it is what makes the suite safe to run against a
+//     live key.
+//
+//     Each check gets its own synthetic X-Forwarded-For. The subscribe limiter
+//     allows 5/hour, and this section makes more than 5 subscribe calls, so they
+//     each need a clean bucket — the same reason the quote section pins an IP.
+//     The limiter itself is exercised deliberately in 23.9.
+const SUB = "e2e-newsletter@example.com";
+const subSecret = process.env.SUBSCRIBER_TOKEN_SECRET?.trim() || process.env.ACCESS_TOKEN_SECRET;
+const mintToken = (email, purpose) =>
+  jwt.sign({ email: email.toLowerCase(), purpose }, subSecret, { expiresIn: "1h" });
+let subIpCounter = 0;
+const asSubIp = (extra = {}) => ({
+  ...extra,
+  headers: {
+    "X-Forwarded-For": `198.51.100.${(subIpCounter += 1) % 250}`,
+    ...extra.headers,
+  },
+});
+const findSub = async () =>
+  (await call("/admin/subscribers", { token })).body.data.find((s) => s.email === SUB);
+
+// 23.1 Sweep leftovers from a crashed run so the create checks are repeatable.
+{
+  for (const s of (await call("/admin/subscribers", { token })).body.data.filter((x) => x.email?.endsWith("@example.com"))) {
+    await call(`/admin/subscribers/${s.id}`, { method: "DELETE", token });
+  }
+}
+
+// 23.2 Subscribing stores a *pending* row, never an active one. Only the
+//       confirmation link may promote it, so a typo or a bot cannot get mail.
+{
+  const { code, body } = await call("/api/subscribers", asSubIp({
+    method: "POST",
+    body: JSON.stringify({ email: SUB }),
+  }));
+  const row = await findSub();
+  check("POST /api/subscribers is public and 201s", code === 201, `code=${code}`);
+  check("a new subscriber starts as pending", row?.status === "pending", `status=${row?.status}`);
+  check("the response never echoes the address list", !("email" in (body.data ?? {})), JSON.stringify(body.data ?? null));
+}
+
+// 23.3 Honeypot, exactly as the quote form: 201, and nothing stored.
+{
+  const before = (await call("/admin/subscribers", { token })).body.data.length;
+  const { code } = await call("/api/subscribers", asSubIp({
+    method: "POST",
+    body: JSON.stringify({ email: "honeypot@example.com", website: "http://spam.example" }),
+  }));
+  const after = (await call("/admin/subscribers", { token })).body.data;
+  check("honeypot subscribe is answered 201", code === 201, `code=${code}`);
+  check("honeypot subscribe stored nothing", after.length === before && !after.some((s) => s.email === "honeypot@example.com"));
+}
+
+// 23.4 Email validation is hand-rolled, so the message is one the visitor can act
+//       on, and it arrives as a field map rather than a bare 500.
+{
+  const blank = await call("/api/subscribers", asSubIp({ method: "POST", body: JSON.stringify({ email: "  " }) }));
+  check("blank email is 400 with a field message", blank.code === 400 && Boolean(blank.body.errors?.email), `code=${blank.code}`);
+  const bad = await call("/api/subscribers", asSubIp({ method: "POST", body: JSON.stringify({ email: "not-an-email" }) }));
+  check("malformed email is 400 with a field message", bad.code === 400 && Boolean(bad.body.errors?.email), `code=${bad.code}`);
+}
+
+// 23.5 Submitting twice must not create a second row: email is uniquely indexed.
+{
+  const before = (await call("/admin/subscribers", { token })).body.data.length;
+  const again = await call("/api/subscribers", asSubIp({ method: "POST", body: JSON.stringify({ email: SUB }) }));
+  const after = (await call("/admin/subscribers", { token })).body.data;
+  check("re-subscribing a pending address is still 201", again.code === 201, `code=${again.code}`);
+  check("re-subscribing does not duplicate the row", after.length === before);
+  check("re-subscribing does not silently activate it", (await findSub())?.status === "pending");
+}
+
+// 23.6 The token is purpose-scoped. An unsubscribe token replayed against the
+//       confirm endpoint must be refused, or anyone could unsubscribe a stranger
+//       by editing a URL.
+{
+  const junk = await call("/api/subscribers/confirm", { method: "POST", body: JSON.stringify({ token: "not-a-jwt" }) });
+  check("a junk confirm token is 400", junk.code === 400, `code=${junk.code}`);
+  const wrongPurpose = await call("/api/subscribers/confirm", {
+    method: "POST",
+    body: JSON.stringify({ token: mintToken(SUB, "unsubscribe") }),
+  });
+  check("an unsubscribe token cannot confirm a subscription", wrongPurpose.code === 400, `code=${wrongPurpose.code}`);
+  const noToken = await call("/api/subscribers/confirm", { method: "POST", body: JSON.stringify({}) });
+  check("confirm with no token is 400", noToken.code === 400, `code=${noToken.code}`);
+}
+
+// 23.7 Confirming promotes the row, and only then is it broadcast to.
+{
+  const { code, body } = await call("/api/subscribers/confirm", {
+    method: "POST",
+    body: JSON.stringify({ token: mintToken(SUB, "confirm") }),
+  });
+  const row = await findSub();
+  check("confirming a valid token is 200", code === 200, `code=${code} ${body.message ?? ""}`);
+  check("confirming sets the row active", row?.status === "active", `status=${row?.status}`);
+  check("confirming records confirmedAt", Boolean(row?.confirmedAt));
+  check("confirming does not return the stored document", !("createdAt" in (body.data ?? {})), JSON.stringify(body.data ?? null));
+}
+
+// 23.8 Creating a product while a subscriber is active must still work. The
+//       broadcast runs here and reaches nobody, because the address is a
+//       reserved example domain — but the admin's save must not depend on it.
+{
+  const { code, body } = await call("/admin/products", {
+    method: "POST",
+    token,
+    body: JSON.stringify({ slug: "e2e-newsletter-widget", name: "E2E Newsletter Widget", desc: "created by the e2e broadcast check" }),
+  });
+  check("product create still 201s with an active subscriber", code === 201, `code=${code} ${body.message ?? ""}`);
+  await call(`/admin/products/${body.data?.id}`, { method: "DELETE", token });
+}
+
+// 23.9 The broadcast skips any product with no slug, because the link in the
+//       email would have nowhere to go. The admin API already refuses to create
+//       one (slug is required), which is why that guard is belt-and-braces —
+//       but the seeded "test product 1" row is exactly the slugless case, so the
+//       guard is not dead code.
+{
+  const { code, body } = await call("/admin/products", {
+    method: "POST",
+    token,
+    body: JSON.stringify({ name: "E2E No Slug", desc: "no slug, so no broadcast" }),
+  });
+  check("a product with no slug is rejected", code === 400 && Boolean(body.errors?.slug), `code=${code} ${JSON.stringify(body.errors ?? null)}`);
+}
+
+// 23.10 Unsubscribing is idempotent, and it survives a token that has already
+//        been used once.
+{
+  const token = mintToken(SUB, "unsubscribe");
+  const first = await call("/api/subscribers/unsubscribe", { method: "POST", body: JSON.stringify({ token }) });
+  check("unsubscribing is 200", first.code === 200, `code=${first.code} ${first.body.message ?? ""}`);
+  check("unsubscribing sets the status", (await findSub())?.status === "unsubscribed", `status=${(await findSub())?.status}`);
+  const again = await call("/api/subscribers/unsubscribe", { method: "POST", body: JSON.stringify({ token }) });
+  check("unsubscribing twice is still 200", again.code === 200, `code=${again.code}`);
+  const wrongPurpose = await call("/api/subscribers/unsubscribe", {
+    method: "POST",
+    body: JSON.stringify({ token: mintToken(SUB, "confirm") }),
+  });
+  check("a confirm token cannot unsubscribe", wrongPurpose.code === 400, `code=${wrongPurpose.code}`);
+}
+
+// 23.11 A confirmation link that outlived an unsubscribe must not undo it, and
+//        the way back on is the footer form.
+{
+  const stale = await call("/api/subscribers/confirm", {
+    method: "POST",
+    body: JSON.stringify({ token: mintToken(SUB, "confirm") }),
+  });
+  check("a stale confirm link does not reactivate", stale.code === 409, `code=${stale.code}`);
+  check("the row is still unsubscribed", (await findSub())?.status === "unsubscribed");
+
+  const back = await call("/api/subscribers", asSubIp({ method: "POST", body: JSON.stringify({ email: SUB }) }));
+  check("re-subscribing after unsubscribing is 201", back.code === 201, `code=${back.code}`);
+  check("re-subscribing puts the row back to pending", (await findSub())?.status === "pending", `status=${(await findSub())?.status}`);
+}
+
+// 23.12 The admin list is protected and read/delete only. An admin-create route
+//        would let anyone with a token put an address on the list that never
+//        opted in, so its absence is asserted rather than assumed.
+{
+  check("GET /admin/subscribers requires a token", (await call("/admin/subscribers")).code === 401);
+  const list = await call("/admin/subscribers", { token });
+  check("GET /admin/subscribers lists the rows", list.code === 200 && Array.isArray(list.body.data), `code=${list.code}`);
+  check("there is no admin route to create a subscriber", (await call("/admin/subscribers", { method: "POST", token, body: JSON.stringify({ email: "sneaky@example.com" }) })).code === 404);
+  check("admin create really did not store anything", !(await call("/admin/subscribers", { token })).body.data.some((s) => s.email === "sneaky@example.com"));
+}
+
+// 23.13 The subscribe limiter. This block deliberately reuses ONE ip so the
+//        requests land in the same bucket — but the ip itself is randomised per
+//        run, otherwise a second run inside the hour would find the bucket
+//        already drained by the first and every request would be 429.
+{
+  const ip = `198.51.100.${Math.floor(Math.random() * 250) + 1}`;
+  const at = (extra) => ({ ...extra, headers: { "X-Forwarded-For": ip } });
+  const codes = [];
+  for (let i = 0; i < 6; i += 1) {
+    codes.push((await call("/api/subscribers", at({ method: "POST", body: JSON.stringify({ email: `burst-${i}@example.com` }) }))).code);
+  }
+  check("the 6th subscribe in an hour is 429", codes[5] === 429, `codes=${codes.join(",")}`);
+  check("the first 5 were accepted", codes.slice(0, 5).every((c) => c === 201), `codes=${codes.join(",")}`);
+  for (const s of (await call("/admin/subscribers", { token })).body.data.filter((x) => x.email?.startsWith("burst-"))) {
+    await call(`/admin/subscribers/${s.id}`, { method: "DELETE", token });
+  }
+}
+
+// 23.14 Deleting removes them for good, and a confirm link for a deleted row
+//        404s rather than resurrecting it.
+{
+  const row = await findSub();
+  const gone = await call(`/admin/subscribers/${row.id}`, { method: "DELETE", token });
+  check("DELETE /admin/subscribers/:id is 200", gone.code === 200, `code=${gone.code}`);
+  check("the row is gone", !(await findSub()));
+  check("DELETE returns no data key", !("data" in gone.body));
+  const orphan = await call("/api/subscribers/confirm", {
+    method: "POST",
+    body: JSON.stringify({ token: mintToken(SUB, "confirm") }),
+  });
+  check("confirming a deleted subscriber is 404", orphan.code === 404, `code=${orphan.code}`);
+  check("DELETE /admin/subscribers/:id with junk id is 404", (await call("/admin/subscribers/not-an-id", { method: "DELETE", token })).code === 404);
+}
+
+// ── customer artwork ───────────────────────────────────────────────────────────
+// The quote form now sends the image itself, not just its name. What matters is
+// that the file is really stored and reachable, that the name is not guessable,
+// and that every failure mode costs the artwork rather than the enquiry.
+//
+// A real 2x2 PNG: these checks genuinely write to Cloudinary, then clean up.
+const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFElEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC",
+  "base64"
+);
+
+const artworkForm = (fields, file) => {
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) form.append(k, v);
+  if (file) form.append("artwork", new Blob([file.bytes], { type: file.type }), file.name);
+  return form;
+};
+
+// 25. A real image is uploaded, stored, and actually served back.
+let artworkUrl = null;
+let artworkId = null;
+{
+  const { code, body } = await callForm(
+    "/api/quotes",
+    artworkForm(
+      { name: "E2E Artwork", email: "artwork@example.com", product: "E2E Test Widget" },
+      { bytes: PNG, type: "image/png", name: "e2e-customer-logo.png" }
+    ),
+    asIp()
+  );
+  artworkId = body.data?.id ?? null;
+  check("POST /api/quotes with artwork is 201", code === 201 && Boolean(artworkId), `code=${code} ${body.message ?? ""}`);
+
+  const row = (await call("/admin/quotes", { token })).body.data.find((q) => q.id === artworkId);
+  artworkUrl = row?.attachmentUrl ?? null;
+  check("the filename is the uploaded part's name", row?.attachment === "e2e-customer-logo.png", row?.attachment);
+  check("attachmentUrl points at the quote-artwork folder", /\/quote-artwork\//.test(artworkUrl ?? ""), artworkUrl ?? "(none)");
+  check("the stored name is randomised, not the customer's filename", Boolean(row?.attachmentPublicId) && !row.attachmentPublicId.includes("customer-logo"), row?.attachmentPublicId ?? "(none)");
+  check("the 201 never echoes the document back", body.data && !("attachmentUrl" in body.data) && !("email" in body.data));
+
+  const img = artworkUrl ? await fetch(artworkUrl) : null;
+  check("the image is really served from Cloudinary", img?.status === 200, `code=${img?.status}`);
+  check("Cloudinary served an actual image", (img?.headers.get("content-type") ?? "").startsWith("image/"), img?.headers.get("content-type") ?? "(none)");
+}
+
+// 26. A honeypot submission must not become free image hosting.
+{
+  const before = await quoteCount();
+  const { code } = await callForm(
+    "/api/quotes",
+    artworkForm(
+      { name: "Artwork Bot", email: "artworkbot@example.com", website: "http://spam.example" },
+      { bytes: PNG, type: "image/png", name: "bot-logo.png" }
+    ),
+    asIp()
+  );
+  check("honeypot with a file attached still returns 201", code === 201, `code=${code}`);
+  check("honeypot with a file attached stores nothing", (await quoteCount()) === before, `${before} -> ${await quoteCount()}`);
+}
+
+// 27. Artwork that cannot be stored must still leave the quote intact — the
+//     enquiry is always worth more than the attachment.
+{
+  const { code, body } = await callForm(
+    "/api/quotes",
+    artworkForm(
+      { name: "E2E Pdf Artwork", email: "pdfart@example.com" },
+      { bytes: Buffer.from("%PDF-1.4 not an image"), type: "application/pdf", name: "artwork.pdf" }
+    ),
+    asIp()
+  );
+  const row = (await call("/admin/quotes", { token })).body.data.find((q) => q.id === body.data?.id);
+  check("a PDF attachment does not fail the submission", code === 201 && Boolean(row), `code=${code}`);
+  check("the PDF filename is still recorded", row?.attachment === "artwork.pdf", row?.attachment);
+  check("a non-image is not pushed to Cloudinary", !row?.attachmentUrl, row?.attachmentUrl ?? "(none)");
+  await call(`/admin/quotes/${row.id}`, { method: "DELETE", token });
+}
+
+// 28. Deleting a quote must destroy the asset, or storage leaks for every quote
+//     ever deleted.
+{
+  const del = await call(`/admin/quotes/${artworkId}`, { method: "DELETE", token });
+  check("DELETE /admin/quotes with artwork is 200", del.code === 200, `code=${del.code}`);
+  check("the quote row is gone", !(await call("/admin/quotes", { token })).body.data.some((q) => q.id === artworkId));
+
+  // The CDN can take a moment to drop a destroyed asset, so retry briefly.
+  let destroyed = false;
+  for (let i = 0; i < 8 && !destroyed; i += 1) {
+    destroyed = artworkUrl ? (await fetch(artworkUrl)).status === 404 : true;
+    if (!destroyed) await new Promise((r) => setTimeout(r, 1500));
+  }
+  check("deleting the quote destroyed the Cloudinary asset", destroyed);
+}
+
+// 24. Cleanup, so a re-run starts from the same state.
 {
   await call(`/admin/products/${widgetId}`, { method: "DELETE", token });
-  const left = (await call("/admin/products", { token })).body.data.filter((p) => p.slug === CAT_SLUG || p.slug === "e2e-no-cat");
+  const left = (await call("/admin/products", { token })).body.data.filter((p) => p.slug === CAT_SLUG || p.slug === "e2e-no-cat" || p.slug === "e2e-newsletter-widget");
   check("e2e category fixtures cleaned up", left.length === 0, `left ${left.map((p) => p.slug).join(", ")}`);
+  const subs = (await call("/admin/subscribers", { token })).body.data.filter((s) => s.email?.endsWith("@example.com"));
+  check("e2e subscriber fixtures cleaned up", subs.length === 0, `left ${subs.map((s) => s.email).join(", ")}`);
 }
 
 console.log("");

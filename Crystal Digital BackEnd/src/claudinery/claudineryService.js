@@ -18,11 +18,19 @@ if (isConfigured) {
 
 const ROOT_FOLDER = "crystal-digital";
 
-export const ALLOWED_FOLDERS = ["products", "gallery", "testimonials"];
+export const ALLOWED_FOLDERS = ["products", "gallery", "testimonials", "quote-artwork"];
 
 const MAX_WIDTH = 1600;
 
-export const uploadImage = async (buffer, { folder, filename, mimetype } = {}) => {
+// Only [a-z0-9_-] survives. A caller-supplied public_id becomes part of a URL that
+// anyone can request, so anything that could carry a path separator, a query
+// string or a percent-escape is stripped rather than escaped.
+const SAFE_ID = /[^a-z0-9_-]+/g;
+
+export const uploadImage = async (
+  buffer,
+  { folder, filename, mimetype, publicId, maxWidth = MAX_WIDTH } = {}
+) => {
   if (!isConfigured) {
     const error = new Error(
       "Image uploads are not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET."
@@ -33,7 +41,16 @@ export const uploadImage = async (buffer, { folder, filename, mimetype } = {}) =
 
   const safeFolder = ALLOWED_FOLDERS.includes(folder) ? folder : "misc";
   const type = mimetype && mimetype.startsWith("image/") ? mimetype : "image/png";
-  const name = (filename || "file").replace(/\.[^/.]+$/, "") || "file";
+
+  // A caller-supplied public_id wins over the filename. That is how customer
+  // artwork gets an unpredictable name instead of "logo-final.png", which would
+  // be guessable by anyone enumerating the folder.
+  const explicitId = String(publicId ?? "").toLowerCase().replace(SAFE_ID, "-").replace(/^-+|-+$/g, "");
+
+  const name =
+    explicitId ||
+    (filename || "file").replace(/\.[^/.]+$/, "").toLowerCase().replace(SAFE_ID, "-") ||
+    "file";
 
   const dataUri = `data:${type};base64,${buffer.toString("base64")}`;
 
@@ -45,7 +62,10 @@ export const uploadImage = async (buffer, { folder, filename, mimetype } = {}) =
       public_id: name,
       resource_type: "image",
       overwrite: false,
-      transformation: [{ width: MAX_WIDTH, crop: "limit" }],
+      // maxWidth: 0 means "keep the original pixels". Customer artwork uses
+      // that: a print-ready logo is routinely wider than MAX_WIDTH and silently
+      // downscaling it would destroy the exact detail the admin needs to judge.
+      ...(maxWidth ? { transformation: [{ width: maxWidth, crop: "limit" }] } : {}),
     });
   } catch (error) {
     const wrapped = new Error(

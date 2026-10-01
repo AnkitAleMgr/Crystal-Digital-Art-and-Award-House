@@ -4,9 +4,10 @@ import { Badge } from "../components/ui/badge";
 import { Modal } from "../components/ui/modal";
 import { ConfirmModal } from "../components/ui/confirmModal";
 import { formatWhen } from "../utils/formatWhen";
+import { downloadCsv } from "../utils/csv";
 import { STATUS_COLORS } from "../constants/admin";
 import { useAdmin } from "../components/layout/adminProvider";
-import { AlertCircle, Eye, Loader2, RefreshCw, Search, Trash2, User } from "lucide-react";
+import { AlertCircle, Download, ExternalLink, Eye, Loader2, RefreshCw, Search, Trash2, User } from "lucide-react";
 
 function Detail({ label, value }: { label: string; value: string }) {
   if (!value) return null;
@@ -37,6 +38,44 @@ export function AdminQuotes() {
     (statusFilter === "all" || q.status === statusFilter) &&
     (q.name.toLowerCase().includes(search.toLowerCase()) || q.product.toLowerCase().includes(search.toLowerCase()) || q.email.toLowerCase().includes(search.toLowerCase()))
   );
+
+  function handleExport() {
+    downloadCsv(
+      `quotes-${statusFilter}.csv`,
+      [
+        "name",
+        "email",
+        "phone",
+        "product",
+        "service",
+        "size",
+        "quantity",
+        "engrave",
+        "attachment",
+        "artwork_url",
+        "message",
+        "status",
+        "received_at",
+        "last_updated_at",
+      ],
+      filtered.map((q) => [
+        q.name,
+        q.email,
+        q.phone,
+        q.product,
+        q.service,
+        q.size,
+        q.quantity,
+        q.engrave,
+        q.attachment,
+        q.attachmentUrl,
+        q.message,
+        q.status,
+        q.createdAt,
+        q.updatedAt,
+      ])
+    );
+  }
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -79,14 +118,23 @@ export function AdminQuotes() {
           <h1 className="text-2xl font-bold text-gray-800" style={{ fontFamily: "Poppins, sans-serif" }}>Quote Requests</h1>
           <p className="text-gray-500 text-sm mt-0.5">{quoteCount} new, {quotes.length} total</p>
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="flex items-center gap-2 self-start px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {refreshing ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            disabled={filtered.length === 0}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download size={15} /> Export CSV
+          </button>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {refreshing ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+            Refresh
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -203,11 +251,47 @@ export function AdminQuotes() {
               </div>
             )}
             {viewing.attachment && (
-              <div className="flex items-center gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50">
-                <AlertCircle size={16} className="text-amber-600 flex-shrink-0" />
-                <p className="text-xs text-amber-800">
-                  Artwork referenced: <span className="font-semibold">{viewing.attachment}</span> — the file itself was not uploaded, ask the customer to email it.
-                </p>
+              <div>
+                <div className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Customer Artwork</div>
+
+                {viewing.attachmentUrl ? (
+                  <div className="rounded-xl border border-gray-200 bg-white p-3">
+                    <img
+                      src={viewing.attachmentUrl}
+                      alt={`Artwork attached by ${viewing.name}`}
+                      // Capped on both axes: artwork is often a tall banner, and
+                      // width-only would leave the modal scrolling for pages.
+                      // object-contain keeps the whole design visible instead of
+                      // cropping it to fit.
+                      className="w-full max-w-[500px] max-h-[420px] h-auto object-contain rounded-lg border border-gray-100 bg-white"
+                    />
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-xs">
+                      <span className="font-semibold text-gray-700 break-all">{viewing.attachment}</span>
+                      {/*
+                        The raw original, not cdn()'s f_auto,q_auto. This is the
+                        file that has to be reproduced at print size, so
+                        optimising it here would hide the very detail being
+                        checked. target=_blank because the point is to see it
+                        full-screen without losing the quote behind it.
+                      */}
+                      <a
+                        href={viewing.attachmentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700"
+                      >
+                        Open full size <ExternalLink size={12} />
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50">
+                    <AlertCircle size={16} className="text-amber-600 flex-shrink-0" />
+                    <p className="text-xs text-amber-800">
+                      Artwork referenced: <span className="font-semibold">{viewing.attachment}</span> — the file itself was not stored, ask the customer to email it.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
             {viewing.message && (

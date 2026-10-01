@@ -7,6 +7,7 @@ import { AdminProducts } from "./admin/pages/adminProduct";
 import { AdminGallery } from "./admin/pages/galleryModal";
 import { AdminTestimonials } from "./admin/pages/testimonials";
 import { AdminQuotes } from "./admin/pages/quoteRequest";
+import { AdminSubscribers } from "./admin/pages/subscriber";
 import { AdminSettings } from "./admin/pages/setting";
 import Layout from "./client/Layout";
 import { SiteDataProvider } from "./client/components/layout/siteDataProvider";
@@ -15,6 +16,8 @@ import { HomePage } from "./client/pages/HomePage";
 import { GalleryPage } from "./client/pages/GalleryPage";
 import { ContactPage } from "./client/pages/ContactPage";
 import { ProductDetailPage } from "./client/pages/ProductDetailPage";
+import { SubscribeConfirmPage } from "./client/pages/subscribeConfirmPage";
+import { UnsubscribePage } from "./client/pages/unsubscribePage";
 
 export default function App() {
   return (
@@ -30,6 +33,14 @@ export default function App() {
           path="/products/:productId"
           element={<ProductDetailPage />}
         />
+        {/* Reached from the links in newsletter emails. Deliberately public
+            pages inside the site Layout — the token in the URL is the only
+            credential, and a bare JSON response would look broken. */}
+        <Route
+          path="/subscribe/confirm"
+          element={<SubscribeConfirmPage />}
+        />
+        <Route path="/unsubscribe" element={<UnsubscribePage />} />
       </Route>
 
       {/* Admin */}
@@ -40,6 +51,7 @@ export default function App() {
           <Route path="gallery" element={<AdminGallery />} />
           <Route path="testimonials" element={<AdminTestimonials />} />
           <Route path="quotes" element={<AdminQuotes />} />
+          <Route path="subscribers" element={<AdminSubscribers />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
       </Route>

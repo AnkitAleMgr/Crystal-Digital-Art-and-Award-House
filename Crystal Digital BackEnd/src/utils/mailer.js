@@ -31,7 +31,7 @@ export const mailFrom = () =>
 
 export const ownerEmail = () => process.env.OWNER_EMAIL?.trim() || "";
 
-export const sendMail = async ({ to, subject, html, replyTo }) => {
+export const sendMail = async ({ to, subject, html, replyTo, headers }) => {
   const resend = getClient();
 
   if (!resend) {
@@ -51,6 +51,10 @@ export const sendMail = async ({ to, subject, html, replyTo }) => {
       subject,
       html,
       ...(replyTo ? { replyTo } : {}),
+      // Only the newsletter uses this, for the RFC 8058 List-Unsubscribe pair
+      // that makes Gmail/Outlook render their own "Unsubscribe" button. Spread
+      // conditionally so the single-recipient emails send no empty header.
+      ...(headers && Object.keys(headers).length > 0 ? { headers } : {}),
     });
 
     if (error) {

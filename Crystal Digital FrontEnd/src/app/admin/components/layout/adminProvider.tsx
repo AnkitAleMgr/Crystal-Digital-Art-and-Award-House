@@ -5,6 +5,7 @@ import { GalleryItem } from "../../types/interface/gallery/gakkeryItem";
 import { Testimonial } from "../../types/interface/testimonials/testimonials";
 import { QuoteRequest } from "../../types/interface/quoteRequest/quoteRequest";
 import { SiteSettings } from "../../types/interface/setting/siteSetting";
+import { Subscriber } from "../../types/interface/subscriber/subscriber";
 import { SEED_SETTINGS } from "../../data/seed";
 import { api, setUnauthorizedHandler, TOKEN_KEY } from "../../utils/api";
 
@@ -42,6 +43,16 @@ type AdminContextValue = {
   settings: SiteSettings;
   saveSettings: (data: SiteSettings) => Promise<void>;
   quoteCount: number;
+  /**
+   * The newsletter list. Read-only from here on purpose: subscribers arrive
+   * through the public footer form and change status by clicking the link in
+   * their own email, so the only admin action is removing one entirely.
+   */
+  subscribers: Subscriber[];
+  deleteSubscriber: (id: string) => Promise<void>;
+  refreshSubscribers: () => Promise<void>;
+  /** How many rows the next product broadcast would actually go out to. */
+  activeSubscriberCount: number;
 };
 
 const AdminContext = createContext<AdminContextValue | undefined>(undefined);
@@ -55,6 +66,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [settings, setSettings] = useState<SiteSettings>(SEED_SETTINGS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -99,15 +111,17 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       api.getAll<GalleryItem>("gallery"),
       api.getAll<Testimonial>("testimonials"),
       api.getAll<QuoteRequest>("quotes"),
+      api.getAll<Subscriber>("subscribers"),
       api.getSettings<SiteSettings>(),
     ])
-      .then(([p, c, g, t, q, s]) => {
+      .then(([p, c, g, t, q, sub, s]) => {
         if (cancelled) return;
         setProducts(p);
         setCategories(c);
         setGallery(g);
         setTestimonials(t);
         setQuotes(q);
+        setSubscribers(sub);
         if (s) setSettings(s);
       })
       .catch((err) => {
@@ -234,7 +248,21 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     if (saved) setSettings(saved);
   };
 
+  const deleteSubscriber = async (id: string) => {
+    await run(() => api.remove("subscribers", id));
+    setSubscribers((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  // Somebody can subscribe while the dashboard is open, exactly like a new
+  // quote — the provider never polls, so this is the same explicit-refresh
+  // pattern the Quotes page uses.
+  const refreshSubscribers = async () => {
+    const fresh = await run(() => api.getAll<Subscriber>("subscribers"));
+    setSubscribers(fresh);
+  };
+
   const quoteCount = quotes.filter((q) => q.status === "new").length;
+  const activeSubscriberCount = subscribers.filter((s) => s.status === "active").length;
 
   return (
     <AdminContext.Provider
@@ -268,6 +296,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         settings,
         saveSettings,
         quoteCount,
+        subscribers,
+        deleteSubscriber,
+        refreshSubscribers,
+        activeSubscriberCount,
       }}
     >
       {children}
