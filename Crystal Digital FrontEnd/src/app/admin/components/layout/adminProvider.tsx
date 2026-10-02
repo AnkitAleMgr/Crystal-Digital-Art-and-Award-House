@@ -6,8 +6,9 @@ import { Testimonial } from "../../types/interface/testimonials/testimonials";
 import { QuoteRequest } from "../../types/interface/quoteRequest/quoteRequest";
 import { SiteSettings } from "../../types/interface/setting/siteSetting";
 import { Subscriber } from "../../types/interface/subscriber/subscriber";
+import type { AdminUser } from "../../types/adminUser";
 import { SEED_SETTINGS } from "../../data/seed";
-import { api, setUnauthorizedHandler, TOKEN_KEY } from "../../utils/api";
+import { api, setUnauthorizedHandler, TOKEN_KEY, usersApi } from "../../utils/api";
 
 type AdminContextValue = {
   authed: boolean;
@@ -53,6 +54,12 @@ type AdminContextValue = {
   refreshSubscribers: () => Promise<void>;
   /** How many rows the next product broadcast would actually go out to. */
   activeSubscriberCount: number;
+  users: AdminUser[];
+  refreshUsers: () => Promise<void>;
+  addUser: (data: import("../../types/adminUser").AdminUserCreate) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
+  currentUser: AdminUser | null;
+  isAdminUser: boolean;
 };
 
 const AdminContext = createContext<AdminContextValue | undefined>(undefined);
@@ -67,6 +74,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [quotes, setQuotes] = useState<QuoteRequest[]>([]);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
   const [settings, setSettings] = useState<SiteSettings>(SEED_SETTINGS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -90,6 +99,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const onLogout = useCallback(() => {
     sessionStorage.removeItem("cdaah_admin");
     sessionStorage.removeItem(TOKEN_KEY);
+    setCurrentUser(null);
     setAuthed(false);
   }, []);
 
@@ -123,8 +133,27 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         setQuotes(q);
         setSubscribers(sub);
         if (s) setSettings(s);
+
       })
       .catch((err) => {
+        if (cancelled) return;
+        if (err instanceof Error && !/session expired/i.test(err.message)) {
+          setError(err.message);
+        }
+      })
+            .then(() => {
+        if (cancelled) return;
+        return fetch((import.meta.env.VITE_API_BASE ?? "http://localhost:3000") + "/admin/me", {
+          headers: { Authorization: `Bearer ${sessionStorage.getItem("cdaah_token") || ""}` },
+        })
+          .then((r) => r.json())
+          .then((me: any) => {
+            const u = me?.data || me?.user;
+            if (u) setCurrentUser(u);
+          })
+          .catch(() => {});
+      })
+.catch((err) => {
         if (cancelled) return;
         if (err instanceof Error && !/session expired/i.test(err.message)) {
           setError(err.message);
@@ -261,6 +290,22 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     setSubscribers(fresh);
   };
 
+
+  
+  const refreshUsers = async () => {
+    const u = await run(() => usersApi.list());
+    setUsers(u);
+  };
+  const addUser = async (data: import("../../types/adminUser").AdminUserCreate) => {
+    const created = await run(() => usersApi.create(data));
+    setUsers((prev) => [created, ...prev]);
+  };
+  const deleteUser = async (id: string) => {
+    await run(() => usersApi.remove(id));
+    setUsers((prev) => prev.filter((x) => x.id !== id));
+  };
+  const isAdminUser = currentUser?.role === "admin";
+
   const quoteCount = quotes.filter((q) => q.status === "new").length;
   const activeSubscriberCount = subscribers.filter((s) => s.status === "active").length;
 
@@ -300,6 +345,12 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         deleteSubscriber,
         refreshSubscribers,
         activeSubscriberCount,
+        users,
+        refreshUsers,
+        addUser,
+        deleteUser,
+        currentUser,
+        isAdminUser,
       }}
     >
       {children}

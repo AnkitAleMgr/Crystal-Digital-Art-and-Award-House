@@ -3,6 +3,9 @@ export const API_BASE =
 
 export const TOKEN_KEY = "cdaah_token";
 
+import type { AdminUser, AdminUserCreate } from "../types/adminUser";
+
+
 export function getToken(): string | null {
   return sessionStorage.getItem(TOKEN_KEY);
 }
@@ -79,4 +82,10 @@ export const api = {
   getSettings: <T>() => request<T>("/settings"),
   saveSettings: <T>(body: unknown) =>
     request<T>("/settings", { method: "PUT", body: JSON.stringify(body) }),
+};
+
+export const usersApi = {
+  list: () => api.getAll<AdminUser>("users"),
+  create: (data: AdminUserCreate) => api.create<AdminUser>("users", data),
+  remove: (id: string) => api.remove("users", id),
 };

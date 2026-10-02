@@ -8,6 +8,7 @@ import { AdminGallery } from "./admin/pages/galleryModal";
 import { AdminTestimonials } from "./admin/pages/testimonials";
 import { AdminQuotes } from "./admin/pages/quoteRequest";
 import { AdminSubscribers } from "./admin/pages/subscriber";
+import { AdminManagement } from "./admin/pages/adminManagement";
 import { AdminSettings } from "./admin/pages/setting";
 import Layout from "./client/Layout";
 import { SiteDataProvider } from "./client/components/layout/siteDataProvider";

@@ -8,6 +8,8 @@ import { TestimonialRoute } from "./testimonials/route.js";
 import { SettingRoute } from "./settings/route.js";
 import { SubscriberRoute } from "./subscribers/route.js";
 import { UploadRoute } from "./upload/route.js";
+import { UsersRoute } from "./users/route.js";
+import { requireAdmin } from "../middleware/requireAdmin.js";
 import express from "express";
 
 
@@ -29,3 +31,4 @@ AdminRoute.use("/gallery", GalleryRoute);
 AdminRoute.use("/testimonials", TestimonialRoute);
 AdminRoute.use("/subscribers", SubscriberRoute);
 AdminRoute.use("/settings", SettingRoute);
+AdminRoute.use("/users", requireAdmin, UsersRoute);

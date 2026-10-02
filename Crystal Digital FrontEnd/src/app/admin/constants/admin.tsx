@@ -7,6 +7,7 @@ import {
   Package,
   Settings,
   Star,
+  Users,
 } from "lucide-react";
 
 // PRODUCT_CATS and GALLERY_CATS used to live here as hardcoded arrays, and had
@@ -27,7 +28,7 @@ export const STATUS_BG: Record<QuoteRequest["status"], string> = {
   closed: "#F9FAFB",
 };
 
-export type AdminSection = "overview" | "products" | "gallery" | "testimonials" | "quotes" | "subscribers" | "settings";
+export type AdminSection = "overview" | "products" | "gallery" | "testimonials" | "quotes" | "subscribers" | "settings" | "users";
 
 export const NAV_ITEMS: { id: AdminSection; label: string; icon: React.ReactNode; badge?: number }[] = [
   { id: "overview", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
@@ -37,4 +38,5 @@ export const NAV_ITEMS: { id: AdminSection; label: string; icon: React.ReactNode
   { id: "quotes", label: "Quote Requests", icon: <MessageSquare size={18} /> },
   { id: "subscribers", label: "Subscribers", icon: <Mail size={18} /> },
   { id: "settings", label: "Settings", icon: <Settings size={18} /> },
+  { id: "users", label: "Admins & Staff", icon: <Users size={18} /> },
 ];
