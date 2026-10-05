@@ -53,6 +53,7 @@ export default function App() {
           <Route path="testimonials" element={<AdminTestimonials />} />
           <Route path="quotes" element={<AdminQuotes />} />
           <Route path="subscribers" element={<AdminSubscribers />} />
+          <Route path="users" element={<AdminManagement />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
       </Route>

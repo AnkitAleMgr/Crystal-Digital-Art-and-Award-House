@@ -205,10 +205,10 @@ export function Footer() {
                 aria-label="Email address for product updates"
                 autoComplete="email"
                 disabled={subState === "sending"}
-                className="flex-1 px-3 py-2.5 rounded-xl text-sm outline-none disabled:opacity-60"
+                className="flex-1 px-3 py-2.5 rounded-xl text-sm outline-none transition-all focus:ring-2 focus:ring-white/50 disabled:opacity-60"
                 style={{
                   background: "rgba(255,255,255,0.07)",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  border: "1px solid rgba(255,255,255,0.25)",
                   color: "white",
                 }}
               />

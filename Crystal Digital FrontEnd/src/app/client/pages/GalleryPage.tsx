@@ -12,6 +12,7 @@ import {
 import { PublicGalleryItem } from "../types/Public";
 import { Section } from "../components/pages/home/homeSection";
 import { X } from "lucide-react";
+import img7 from "../../../imports/image-7.png";
 
 export function GalleryPage() {
   const navigate = useNavigate();
@@ -28,19 +29,15 @@ export function GalleryPage() {
   );
   const filtered = galleryItems.filter((i) => inCategory(i.cat, filter));
 
-  // The banner previously used a hardcoded local import; it now comes from the
-  // collection image in the database so it stays in sync with the admin.
-  const banner =
-    galleryItems.find((i) => i.label === "Full Award Collection Display")?.img ??
-    galleryItems[0]?.img ??
-    "";
-
   return (
     <div style={{ paddingTop: "80px" }}>
-      {/* Banner */}
+      {/* Banner — a static local import, like the hero/about/contact headers.
+          It used to come from the gallery collection so the admin could change
+          it, but that meant an empty gallery rendered a blank banner. Decoration
+          like this belongs in the code, not the database. */}
       <div className="relative h-52 overflow-hidden">
         <ImageWithFallback
-          src={cdn(banner)}
+          src={img7}
           alt="Gallery banner"
           className="w-full h-full object-cover"
         />
