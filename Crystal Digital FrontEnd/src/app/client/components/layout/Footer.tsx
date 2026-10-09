@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { ImageWithFallback } from "../../../components/figma/ImageWithFallback";
-import logo from "../../../../imports/image.png";
+import logo from "../../../../imports/image.webp";
 import { Facebook, Instagram, Loader2, MapPin, MessageCircle, Send } from "lucide-react";
 import { useSiteData } from "./siteDataProvider";
 import { whatsappLink } from "../../data/siteDefaults";
@@ -86,21 +86,25 @@ export function Footer() {
                   icon: Facebook,
                   color: "#1877F2",
                   href: settings.facebookUrl,
+                  label: "Facebook",
                 },
                 {
                   icon: Instagram,
                   color: "#E1306C",
                   href: null,
+                  label: "Instagram (coming soon)",
                 },
                 {
                   icon: MessageCircle,
                   color: "#25D366",
                   href: whatsappLink(settings),
+                  label: "Chat on WhatsApp",
                 },
                 {
                   icon: MapPin,
                   color: "#EA4335",
                   href: settings.mapLink,
+                  label: "Find us on the map",
                 },
               ].map((s, i) => {
                 const Icon = s.icon;
@@ -110,6 +114,7 @@ export function Footer() {
                     onClick={() =>
                       s.href && window.open(s.href, "_blank")
                     }
+                    aria-label={s.label}
                     className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:scale-110"
                     style={{
                       background: `${s.color}20`,
@@ -129,12 +134,12 @@ export function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4
+            <h2
               className="font-bold text-white text-sm mb-4"
               style={{ fontFamily: "Poppins, sans-serif" }}
             >
               Quick Links
-            </h4>
+            </h2>
             <div className="flex flex-col gap-2.5">
               {[
                 { label: "Home", path: "/" },
@@ -156,12 +161,12 @@ export function Footer() {
 
           {/* Services */}
           <div>
-            <h4
+            <h2
               className="font-bold text-white text-sm mb-4"
               style={{ fontFamily: "Poppins, sans-serif" }}
             >
               Services
-            </h4>
+            </h2>
             <div className="flex flex-col gap-2.5">
               {[
                 "Crystal Awards",
@@ -180,12 +185,12 @@ export function Footer() {
 
           {/* Newsletter */}
           <div>
-            <h4
+            <h2
               className="font-bold text-white text-sm mb-4"
               style={{ fontFamily: "Poppins, sans-serif" }}
             >
               Newsletter
-            </h4>
+            </h2>
             <p className="text-gray-400 text-sm mb-4 leading-relaxed">
               Get an email when we add something new. Nothing else, and you can
               unsubscribe from any one of them.
@@ -267,11 +272,11 @@ export function Footer() {
           </div>
         </div>
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-gray-500 text-xs">
+          <p className="text-gray-300 text-xs">
             © 2026 POCOMAT DEVINEERS — All Rights Reserved.
           </p>
           <div className="flex items-center gap-4">
-            <p className="text-gray-600 text-xs">
+            <p className="text-gray-300 text-xs">
               {settings.businessName}
             </p>
           </div>

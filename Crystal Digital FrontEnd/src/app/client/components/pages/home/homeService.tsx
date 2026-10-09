@@ -79,12 +79,12 @@ export function ServicesGrid() {
             {s.emoji}
           </div>
           <div>
-            <h4
+            <h3
               className="card-title font-bold text-gray-800 text-sm mb-1.5 leading-snug"
               style={{ fontFamily: "Poppins, sans-serif" }}
             >
               {s.label}
-            </h4>
+            </h3>
             <p className="card-desc text-xs text-gray-500 leading-relaxed">
               {s.desc}
             </p>
@@ -92,7 +92,7 @@ export function ServicesGrid() {
           <div className="mt-auto pt-2">
             <span
               className="text-xs font-semibold"
-              style={{ color: s.color }}
+              style={{ color: s.color === "#D4AF37" ? "#8C6D0E" : s.color }}
             >
               Learn more →
             </span>

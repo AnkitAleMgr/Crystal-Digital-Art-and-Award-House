@@ -78,12 +78,12 @@ export function WhyChooseUs() {
             >
               <Icon size={20} style={{ color: "#2563EB" }} />
             </div>
-            <h4
+            <h3
               className="card-title font-bold text-gray-800 mb-1.5 text-sm"
               style={{ fontFamily: "Poppins, sans-serif" }}
             >
               {w.title}
-            </h4>
+            </h3>
             <p className="card-desc text-xs text-gray-500 leading-relaxed">
               {w.desc}
             </p>

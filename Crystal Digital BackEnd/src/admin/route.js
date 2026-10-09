@@ -1,5 +1,12 @@
-import { adminLogin, adminRegister, getMe } from "./auth/controller.js";
+import {
+  adminLogin,
+  adminRegister,
+  getMe,
+  adminForgotPassword,
+  adminResetPassword,
+} from "./auth/controller.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
+import { forgotPasswordRateLimit } from "../middleware/rateLimit.js";
 import { ProductRoute } from "./products/route.js";
 import { CategoryRoute } from "./categories/route.js";
 import { QuoteRoute } from "./quotes/route.js";
@@ -26,6 +33,13 @@ AdminRoute.post("/register", adminRegister);
 
 // Public: exchanges email + password for a JWT plus a whitelisted user object.
 AdminRoute.post("/admin-login", adminLogin);
+
+// Public: starts a password reset. Always answers 200 without revealing whether
+// the address exists; rate-limited because each hit sends an email.
+AdminRoute.post("/forgot-password", forgotPasswordRateLimit, adminForgotPassword);
+
+// Public: finishes a reset with the single-use token from that email.
+AdminRoute.post("/reset-password", adminResetPassword);
 
 // Everything below requires a valid token.
 AdminRoute.use(authMiddleware);

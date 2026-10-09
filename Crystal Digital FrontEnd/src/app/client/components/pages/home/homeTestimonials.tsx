@@ -70,15 +70,22 @@ export function Testimonials() {
           <button
             key={i}
             onClick={() => setTidx(i)}
-            className="w-2 h-2 rounded-full transition-all"
-            style={{
-              background:
-                i === tidx
-                  ? "#D4AF37"
-                  : "rgba(255,255,255,0.35)",
-              width: i === tidx ? "20px" : "8px",
-            }}
-          />
+            aria-label={`Go to testimonial ${i + 1}`}
+            aria-current={i === tidx}
+            className="p-2 flex items-center"
+          >
+            <span
+              className="block rounded-full transition-all"
+              style={{
+                background:
+                  i === tidx
+                    ? "#D4AF37"
+                    : "rgba(255,255,255,0.35)",
+                width: i === tidx ? "20px" : "8px",
+                height: "8px",
+              }}
+            />
+          </button>
         ))}
       </div>
     </div>

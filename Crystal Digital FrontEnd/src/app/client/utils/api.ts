@@ -35,13 +35,18 @@ export class PublicApiError extends Error {
 // Cloudinary delivery transforms have to be injected into the URL *path*, not
 // appended as a query string: .../image/upload/f_auto,q_auto/<version>/<id>.
 // Appending "?f_auto&q_auto" is silently ignored and serves the original
-// upload (a 2.7 MB PNG instead of a 240 KB WebP).
-export function cdn(url: string): string {
+// upload (a 2.7 MB PNG instead of a 240 KB WebP). An optional width adds
+// w_<n>,c_limit so a full-size upload is not sent for a small slot; c_limit
+// never upscales, so a narrow source is left alone.
+export function cdn(url: string, width?: number): string {
   if (!url || !url.includes("res.cloudinary.com") || !url.includes("/upload/")) {
     return url;
   }
   if (url.includes("/upload/f_auto,")) return url;
-  return url.replace("/upload/", "/upload/f_auto,q_auto/");
+  const transform = width
+    ? `f_auto,q_auto,w_${width},c_limit`
+    : "f_auto,q_auto";
+  return url.replace("/upload/", `/upload/${transform}/`);
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

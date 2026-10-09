@@ -1,5 +1,10 @@
 import crypto from "crypto";
 import { AdminModel } from "./model.js";
+import {
+  verifyResetToken,
+  passwordFingerprint,
+} from "../../utils/resetTokens.js";
+import { notifyAdminPasswordReset } from "../../utils/notifications.js";
 
 // Whitelist, not a spread of the Mongoose document: the response must never
 // carry the password hash (or anything else the schema happens to hold).
@@ -160,4 +165,125 @@ export const adminLogin = async (req, res) => {
 // token is alive and returns who it belongs to.
 export const getMe = (req, res) => {
   res.status(200).json({ status: true, data: req.admin });
+};
+
+// POST /admin/forgot-password — starts a reset. The answer is identical whether or
+// not the address belongs to an account, so the endpoint cannot be used to
+// enumerate admins. Rate-limited at the route because every hit sends an email.
+export const adminForgotPassword = async (req, res) => {
+  const email = String(req.body?.email ?? "").trim().toLowerCase();
+
+  // One reply for a malformed address, an unknown one and a real one — the whole
+  // point is that the caller learns nothing.
+  const generic = {
+    status: true,
+    message: "If that email belongs to an account, we have sent a reset link.",
+  };
+
+  try {
+    // +password because the reset token is fingerprinted against the current hash.
+    const admin = email
+      ? await AdminModel.findOne({ email }).select("+password")
+      : null;
+
+    if (admin) {
+      // Fire-and-forget, exactly like the public notifications: a mail outage
+      // must not change the response, and the answer is generic either way.
+      notifyAdminPasswordReset(admin).catch(() => {});
+    }
+  } catch (error) {
+    // Still generic: a database hiccup must not reveal that the address exists.
+    console.error("Admin forgot-password error:", error);
+  }
+
+  return res.status(200).json(generic);
+};
+
+// POST /admin/reset-password — finishes a reset with the token from the email.
+// The token is single-use: it carries a digest of the password hash it was issued
+// against, so it verifies only until the password actually changes. Saving through
+// the model runs the bcrypt pre-save hook and the 8-72 policy, so no hashing or
+// password rules live here.
+export const adminResetPassword = async (req, res) => {
+  const token = String(req.body?.token ?? "");
+  const password = String(req.body?.password ?? "");
+
+  const badToken = () =>
+    res.status(400).json({
+      status: false,
+      message:
+        "This reset link is invalid or has expired. Please request a new one.",
+    });
+
+  const claims = verifyResetToken(token);
+
+  if (!claims) {
+    return badToken();
+  }
+
+  if (password.length < 8 || password.length > 72) {
+    return res.status(400).json({
+      status: false,
+      message: "Password must be between 8 and 72 characters.",
+      errors: { password: "Password must be between 8 and 72 characters." },
+    });
+  }
+
+  try {
+    const admin = await AdminModel.findById(claims.id).select("+password");
+
+    if (!admin) {
+      return badToken();
+    }
+
+    // Timing-safe compare of the two hex digests. A mismatch means the password
+    // changed after this link was issued — almost always because the link was
+    // already used once.
+    const expected = Buffer.from(passwordFingerprint(admin.password), "hex");
+    const provided = Buffer.from(claims.ph, "hex");
+
+    const fresh =
+      provided.length === expected.length &&
+      crypto.timingSafeEqual(provided, expected);
+
+    if (!fresh) {
+      return badToken();
+    }
+
+    // Setting and saving runs the schema's pre-save hash hook. The controller
+    // deliberately does not build a hash itself.
+    admin.password = password;
+    await admin.save();
+
+    return res.status(200).json({
+      status: true,
+      message: "Your password has been updated. You can now sign in.",
+    });
+  } catch (error) {
+    // A crafted id that is not a valid ObjectId is just another bad token.
+    if (error.name === "CastError") {
+      return badToken();
+    }
+
+    if (error.name === "ValidationError") {
+      const errors = {};
+
+      Object.keys(error.errors).forEach((field) => {
+        errors[field] = error.errors[field].message;
+      });
+
+      return res.status(400).json({
+        status: false,
+        message: "Password does not meet the requirements.",
+        errors,
+      });
+    }
+
+    console.error("Admin reset-password error:", error);
+
+    return res.status(500).json({
+      status: false,
+      message: "Internal server error",
+    });
+  }
 };

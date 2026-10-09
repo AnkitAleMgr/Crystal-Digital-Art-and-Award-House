@@ -4,9 +4,9 @@ import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { useInView } from "../../client/hooks/useInView";
 import { StatCounter } from "../../client/components/pages/aboutUs/aboutUsStatCounter";
 import { Section, SectionHeading, SectionLabel } from "../components/pages/home/homeSection";
-import img6 from "../../../imports/image-6.png";
-import img7 from "../../../imports/image-7.png";
-import img8 from "../../../imports/image-8.png";
+import img6 from "../../../imports/image-6.webp";
+import img7 from "../../../imports/image-7.webp";
+import img8 from "../../../imports/image-8.webp";
 import { useSiteData } from "../components/layout/siteDataProvider";
 import { applyPageMeta } from "../utils/seo";
 
@@ -115,14 +115,14 @@ export function AboutPage() {
                     border: "1px solid rgba(37,99,235,0.08)",
                   }}
                 >
-                  <h4
+                  <h3
                     className="font-bold text-gray-800 text-sm mb-1.5"
                     style={{
                       fontFamily: "Poppins, sans-serif",
                     }}
                   >
                     {v.title}
-                  </h4>
+                  </h3>
                   <p className="text-xs text-gray-500 leading-relaxed">
                     {v.desc}
                   </p>

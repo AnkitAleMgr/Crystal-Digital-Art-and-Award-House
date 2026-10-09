@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { Section, SectionHeading, SectionLabel } from "../components/pages/home/homeSection";
-import img8 from "../../../imports/image-8.png";
+import img8 from "../../../imports/image-8.webp";
 import { PublicApiError, publicApi } from "../utils/api";
 import { useSiteData } from "../components/layout/siteDataProvider";
 import { whatsappLink } from "../data/siteDefaults";
@@ -261,12 +261,12 @@ export function ContactPage() {
               boxShadow: "0 4px 30px rgba(0,0,0,0.08)",
             }}
           >
-            <h3
+            <h2
               className="text-xl font-bold text-gray-800 mb-6"
               style={{ fontFamily: "Poppins, sans-serif" }}
             >
               Send Us a Message
-            </h3>
+            </h2>
             {sent && (
               <div
                 className="mb-5 px-5 py-4 rounded-xl flex items-center gap-3"

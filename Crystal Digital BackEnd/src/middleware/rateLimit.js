@@ -109,6 +109,15 @@ export const subscribeRateLimit = rateLimit({
   message: "Too many subscription attempts from this device. Please try again later.",
 });
 
+// Admin password-reset requests, on their own buckets. Five an hour is enough for
+// somebody fat-fingering their address a couple of times, and far too few to use
+// the endpoint to email-bomb an inbox.
+export const forgotPasswordRateLimit = rateLimit({
+  max: 5,
+  keyPrefix: "admin-forgot",
+  message: "Too many reset requests from this device. Please try again later.",
+});
+
 // ── Customer artwork budget ────────────────────────────────────────────────────
 //
 // quoteRateLimit bounds uploads per IP (10/hour x 5MB), but 10 IPs are 10x that.

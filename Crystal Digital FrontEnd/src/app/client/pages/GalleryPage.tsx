@@ -14,7 +14,7 @@ import { PublicGalleryItem } from "../types/Public";
 import { applyPageMeta } from "../utils/seo";
 import { Section } from "../components/pages/home/homeSection";
 import { X } from "lucide-react";
-import img7 from "../../../imports/image-7.png";
+import img7 from "../../../imports/image-7.webp";
 
 // Gallery grid with category pills and a lightbox; items can link to a
 // product's page via linkedProductId.
@@ -121,7 +121,7 @@ export function GalleryPage() {
               onClick={() => setLightbox(item)}
             >
               <ImageWithFallback
-                src={cdn(item.img)}
+                src={cdn(item.img, 600)}
                 alt={item.label}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
@@ -162,7 +162,7 @@ export function GalleryPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <ImageWithFallback
-              src={cdn(lightbox.img)}
+              src={cdn(lightbox.img, 1200)}
               alt={lightbox.label}
               className="w-full object-cover max-h-[70vh]"
             />

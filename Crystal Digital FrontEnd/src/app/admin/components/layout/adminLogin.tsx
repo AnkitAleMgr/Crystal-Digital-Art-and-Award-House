@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AlertCircle, Eye, Lock, Mail } from "lucide-react";
+import { AlertCircle, CheckCircle, Eye, Lock, Mail } from "lucide-react";
 import { API_BASE } from "../../utils/api";
 
 // Login screen: POSTs email/password to /admin/admin-login and stores the
@@ -8,8 +8,40 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [mode, setMode] = useState<"login" | "forgot">("login");
+
+  // "Forgot password" only asks for the email. The backend answers with the same
+  // message whether or not the address belongs to an account, so the screen must
+  // not imply the account was found either.
+  async function handleForgot(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setNotice("");
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/admin/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: username }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.status) {
+        setNotice(
+          data.message ||
+            "If that email belongs to an account, we have sent a reset link."
+        );
+      } else {
+        setError(data?.message || "Something went wrong. Please try again.");
+      }
+    } catch {
+      setError("Unable to reach the server. Is the backend running?");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,8 +88,14 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
         </div>
 
         <div className="bg-white rounded-3xl shadow-2xl p-8">
-          <h2 className="text-lg font-bold text-gray-800 mb-1" style={{ fontFamily: "Poppins, sans-serif" }}>Sign In</h2>
-          <p className="text-gray-500 text-sm mb-6">Enter your credentials to access the dashboard.</p>
+          <h2 className="text-lg font-bold text-gray-800 mb-1" style={{ fontFamily: "Poppins, sans-serif" }}>
+            {mode === "forgot" ? "Reset password" : "Sign In"}
+          </h2>
+          <p className="text-gray-500 text-sm mb-6">
+            {mode === "forgot"
+              ? "Enter your account email and we'll send a reset link."
+              : "Enter your credentials to access the dashboard."}
+          </p>
 
           {error && (
             <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 border border-red-100 mb-5">
@@ -66,7 +104,14 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {notice && (
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-green-50 border border-green-100 mb-5">
+              <CheckCircle size={18} className="text-green-600 mt-0.5 flex-shrink-0" />
+              <p className="text-green-700 text-sm">{notice}</p>
+            </div>
+          )}
+
+          <form onSubmit={mode === "forgot" ? handleForgot : handleSubmit} className="space-y-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-semibold text-gray-700">Email</label>
               <div className="relative">
@@ -82,23 +127,25 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-semibold text-gray-700">Password</label>
-              <div className="relative">
-                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type={showPass ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
-                  className="w-full pl-10 pr-12 py-3 rounded-xl border border-gray-200 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
-                  required
-                />
-                <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-                  <Eye size={16} />
-                </button>
+            {mode === "login" && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-gray-700">Password</label>
+                <div className="relative">
+                  <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type={showPass ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    className="w-full pl-10 pr-12 py-3 rounded-xl border border-gray-200 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
+                    required
+                  />
+                  <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                    <Eye size={16} />
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             <button
               type="submit"
@@ -106,9 +153,28 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
               className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all hover:shadow-lg active:scale-95 disabled:opacity-70 mt-2"
               style={{ background: "linear-gradient(135deg, #2563EB, #1D4ED8)" }}
             >
-              {loading ? "Signing in..." : "Sign In"}
+              {loading
+                ? mode === "forgot"
+                  ? "Sending..."
+                  : "Signing in..."
+                : mode === "forgot"
+                  ? "Send reset link"
+                  : "Sign In"}
             </button>
           </form>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMode(mode === "login" ? "forgot" : "login");
+              setError("");
+              setNotice("");
+              setPassword("");
+            }}
+            className="mt-4 w-full text-center text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+          >
+            {mode === "login" ? "Forgot password?" : "Back to sign in"}
+          </button>
 
           <div className="mt-5 p-3 rounded-xl bg-blue-50 border border-blue-100">
             <p className="text-xs text-blue-600 text-center font-medium">Authorized personnel only. All access is logged.</p>

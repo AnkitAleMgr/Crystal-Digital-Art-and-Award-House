@@ -3,6 +3,7 @@
 // own fixtures first, so it stays repeatable; assertions below are numbered.
 
 import "dotenv/config";
+import crypto from "crypto";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 
@@ -116,6 +117,12 @@ const artworkForm = (fields, file) => {
   const strays = (await call("/admin/products", { token })).body.data.filter((p) => p.name.startsWith("E2E "));
   for (const p of strays) await call(`/admin/products/${p.id}`, { method: "DELETE", token });
   if (strays.length) console.log(`swept ${strays.length} leftover product(s) from a previous run`);
+
+  // The password-reset section creates a throwaway staff account; a crashed run
+  // leaves it behind, so sweep it here like every other fixture.
+  const resetAccounts = (await call("/admin/users", { token })).body.data.filter((u) => u.email?.startsWith("e2e-reset-"));
+  for (const u of resetAccounts) await call(`/admin/users/${u.id}`, { method: "DELETE", token });
+  if (resetAccounts.length) console.log(`swept ${resetAccounts.length} leftover e2e reset account(s) from a previous run`);
 }
 
 // 1. A slug sent by the caller is ignored — it is server-owned now, so a crafted
@@ -827,6 +834,140 @@ let artworkId = null;
     if (!destroyed) await new Promise((r) => setTimeout(r, 2000));
   }
   check("deleting the quote destroyed the Cloudinary asset", destroyed);
+}
+
+// ── admin password reset ───────────────────────────────────────────────────────
+// The "Forgot password" flow. A throwaway staff account is created and reset, so
+// the real admin's password is never touched. Every address is @example.com, so
+// the reset email is suppressed (isTestAddress) and nothing is actually sent.
+const RESET_EMAIL = `e2e-reset-${Math.floor(Math.random() * 1e6)}@example.com`;
+const OLD_PASS = "OldPass123";
+const NEW_PASS = "NewPass456";
+const resetSecret =
+  process.env.RESET_TOKEN_SECRET?.trim() || process.env.ACCESS_TOKEN_SECRET;
+const mintReset = (id, fingerprint) =>
+  jwt.sign({ id, purpose: "reset", ph: fingerprint }, resetSecret, { expiresIn: "1h" });
+let resetUserId = null;
+let resetPh = null;
+
+// 29. A throwaway admin/staff account to reset.
+{
+  const { code, body } = await call("/admin/users", {
+    method: "POST",
+    token,
+    body: JSON.stringify({ name: "E2E Reset", email: RESET_EMAIL, password: OLD_PASS, role: "staff" }),
+  });
+  resetUserId = body.data?.id ?? null;
+  check("created a throwaway staff account for the reset checks", code === 201 && Boolean(resetUserId), `code=${code} ${body.message ?? ""}`);
+
+  const raw = await mongoose.connection.db.collection("admins").findOne({ email: RESET_EMAIL });
+  resetPh = raw ? crypto.createHash("sha256").update(String(raw.password)).digest("hex") : null;
+}
+
+// 30. The account's current password works before any reset.
+{
+  const login = await call("/admin/admin-login", { method: "POST", body: JSON.stringify({ email: RESET_EMAIL, password: OLD_PASS }) });
+  check("the throwaway account can sign in before the reset", login.code === 200 && login.body.status === true, `code=${login.code}`);
+}
+
+// 31. Forgot password never reveals whether an address exists: the unknown and
+//     the known address must get a byte-identical answer.
+{
+  const unknown = await call("/admin/forgot-password", {
+    method: "POST",
+    headers: { "X-Forwarded-For": `203.0.113.${Math.floor(Math.random() * 250) + 1}` },
+    body: JSON.stringify({ email: "nobody-here@example.com" }),
+  });
+  const known = await call("/admin/forgot-password", {
+    method: "POST",
+    headers: { "X-Forwarded-For": `203.0.113.${Math.floor(Math.random() * 250) + 1}` },
+    body: JSON.stringify({ email: RESET_EMAIL }),
+  });
+  check("forgot-password is public and answers 200", unknown.code === 200 && unknown.body.status === true, `code=${unknown.code}`);
+  check("forgot-password for an unknown address is also 200", known.code === 200 && known.body.status === true, `code=${known.code}`);
+  check("forgot-password reveals nothing that distinguishes the two", unknown.body.message === known.body.message, `unknown="${unknown.body.message}" known="${known.body.message}"`);
+  check("forgot-password never returns a token", !JSON.stringify(unknown.body).includes("token") && !JSON.stringify(known.body).includes("token"));
+}
+
+// 32. The token is verified by purpose and by a digest of the current hash, so
+//     every bad shape must be refused.
+{
+  const junk = await call("/admin/reset-password", { method: "POST", body: JSON.stringify({ token: "not-a-jwt", password: NEW_PASS }) });
+  check("a junk reset token is 400", junk.code === 400, `code=${junk.code}`);
+
+  const wrongPurpose = await call("/admin/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token: jwt.sign({ id: resetUserId, purpose: "confirm", ph: resetPh }, resetSecret, { expiresIn: "1h" }), password: NEW_PASS }),
+  });
+  check("a wrong-purpose token cannot reset a password", wrongPurpose.code === 400, `code=${wrongPurpose.code}`);
+
+  const unknownId = await call("/admin/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token: mintReset("0123456789abcdef01234567", resetPh), password: NEW_PASS }),
+  });
+  check("a token for a non-existent account is refused", unknownId.code === 400, `code=${unknownId.code}`);
+
+  const stalePrint = await call("/admin/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token: mintReset(resetUserId, "0".repeat(64)), password: NEW_PASS }),
+  });
+  check("a token whose password fingerprint does not match is refused", stalePrint.code === 400, `code=${stalePrint.code}`);
+}
+
+// 33. A valid token with a password that breaks the policy is refused, and the
+//     field-level message comes back.
+{
+  const weak = await call("/admin/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token: mintReset(resetUserId, resetPh), password: "short" }),
+  });
+  check("a too-short new password is refused", weak.code === 400 && Boolean(weak.body.errors?.password), `code=${weak.code} ${JSON.stringify(weak.body.errors)}`);
+}
+
+// 34. The happy path: a fresh valid token sets the password, and signing in then
+//     uses the new one while the old one is dead.
+{
+  const before = (await call("/admin/admin-login", { method: "POST", body: JSON.stringify({ email: RESET_EMAIL, password: OLD_PASS }) })).code;
+  const good = await call("/admin/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token: mintReset(resetUserId, resetPh), password: NEW_PASS }),
+  });
+  check("a valid reset token updates the password", good.code === 200 && good.body.status === true, `code=${good.code} ${good.body.message ?? ""}`);
+
+  const withNew = await call("/admin/admin-login", { method: "POST", body: JSON.stringify({ email: RESET_EMAIL, password: NEW_PASS }) });
+  const withOld = await call("/admin/admin-login", { method: "POST", body: JSON.stringify({ email: RESET_EMAIL, password: OLD_PASS }) });
+  check("the account signs in with the new password", before === 200 && withNew.code === 200, `before=${before} after=${withNew.code}`);
+  check("the old password no longer works", withOld.code === 400, `code=${withOld.code}`);
+}
+
+// 35. The link is single-use: the same token is refused once the password has
+//     changed, because its fingerprint no longer matches.
+{
+  const reuse = await call("/admin/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token: mintReset(resetUserId, resetPh), password: "Another789" }),
+  });
+  check("a used reset token cannot be replayed", reuse.code === 400, `code=${reuse.code}`);
+}
+
+// 36. The forgot endpoint is rate limited, so it cannot be used to email-bomb.
+{
+  const ip = `198.51.100.${Math.floor(Math.random() * 250) + 1}`;
+  const at = () => call("/admin/forgot-password", {
+    method: "POST",
+    headers: { "X-Forwarded-For": ip },
+    body: JSON.stringify({ email: "burst@example.com" }),
+  });
+  const codes = [];
+  for (let i = 0; i < 6; i += 1) codes.push((await at()).code);
+  check("the 6th forgot-password request in an hour is 429", codes[5] === 429, `codes=${codes.join(",")}`);
+  check("the first 5 forgot-password requests are accepted", codes.slice(0, 5).every((c) => c === 200), `codes=${codes.join(",")}`);
+}
+
+// 37. Clean up the throwaway account.
+{
+  const del = await call(`/admin/users/${resetUserId}`, { method: "DELETE", token });
+  check("the throwaway reset account is deleted", del.code === 200, `code=${del.code}`);
 }
 
 // 24. Cleanup, so a re-run starts from the same state.

@@ -102,7 +102,7 @@ export function FeaturedProducts() {
               style={{ background: "#F8FAFC" }}
             >
               <ImageWithFallback
-                src={cdn(p.img)}
+                src={cdn(p.img, 800)}
                 alt={p.name}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
@@ -154,7 +154,7 @@ export function FeaturedProducts() {
       </div>
 
       {filtered.length === 0 && (
-        <div className="text-center py-16 text-gray-400 text-sm">
+        <div className="text-center py-16 text-gray-700 text-base">
           No products in this category yet.
         </div>
       )}

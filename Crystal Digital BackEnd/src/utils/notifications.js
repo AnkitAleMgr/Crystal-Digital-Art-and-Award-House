@@ -3,6 +3,7 @@ import { SubscriberModel } from "../admin/subscribers/model.js";
 import { isMailConfigured, ownerEmail, sendMail } from "./mailer.js";
 import { siteLink } from "./siteUrl.js";
 import { signSubscriberToken } from "./subscribeTokens.js";
+import { signResetToken } from "./resetTokens.js";
 
 // Every email this business sends — built here, transported by utils/mailer.js,
 // sent from the server only (a browser-side sender would ship the API key and
@@ -210,6 +211,56 @@ export const notifyCustomerOfStatus = async (quote) => {
   return sendMail({
     to: quote.email,
     subject: `Your quote request update — ${state.label}`,
+    html,
+    replyTo: ownerEmail() || undefined,
+  });
+};
+
+// ── Admin password reset ──────────────────────────────────────────────────────
+
+/**
+ * Sent to an admin/staff member who used "Forgot password". The link carries a
+ * single-use, hour-long token and points at a page on the site rather than at the
+ * API, so an email scanner's automatic GET cannot spend the token — the page only
+ * POSTs when a human submits a new password.
+ *
+ * `admin` must have been loaded with .select("+password"), because the token is
+ * fingerprinted against the current hash.
+ */
+export const notifyAdminPasswordReset = async (admin) => {
+  if (isTestAddress(admin?.email)) {
+    return { sent: false, reason: "test_address" };
+  }
+
+  const token = signResetToken(admin);
+
+  // No token secret means no usable link, so mailing one would only teach people
+  // that our mail does not work.
+  if (!token) {
+    return { sent: false, reason: "no_token_secret" };
+  }
+
+  const info = await business();
+  const href = siteLink(`/admin/reset-password?token=${encodeURIComponent(token)}`);
+
+  const html = layout(
+    "Reset your password",
+    `<p style="margin:0 0 6px;font-size:15px;">Hello ${esc(admin.name)},</p>
+     <p style="margin:0;font-size:14px;line-height:1.6;color:#4B5563;">
+       We received a request to reset the password for your ${esc(admin.role)} account.
+       This link works once and expires in one hour.
+     </p>
+     ${button(href, "Choose a new password")}
+     <p style="margin:18px 0 0;font-size:12px;color:#9CA3AF;">
+       If you did not request this, you can ignore this email — your password will
+       not change.
+     </p>`,
+    info
+  );
+
+  return sendMail({
+    to: admin.email,
+    subject: "Reset your Crystal Digital password",
     html,
     replyTo: ownerEmail() || undefined,
   });

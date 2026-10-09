@@ -1,6 +1,6 @@
-import img2 from "../../../../../imports/image-2.png";
-import img3 from "../../../../../imports/image-3.png";
-import img4 from "../../../../../imports/image-4.png";
+import img2 from "../../../../../imports/image-2.webp";
+import img3 from "../../../../../imports/image-3.webp";
+import img4 from "../../../../../imports/image-4.webp";
 import { useCallback, useEffect, useState } from "react";
 import { ImageWithFallback } from "../../../../components/figma/ImageWithFallback";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -72,6 +72,7 @@ export function HeroCarousel({
           src={slide.img}
           alt={slide.title}
           className="w-full h-full object-cover"
+          fetchPriority="high"
         />
         {/* Gradient overlay */}
         <div
@@ -146,6 +147,7 @@ export function HeroCarousel({
         onClick={() =>
           go((idx - 1 + heroSlides.length) % heroSlides.length)
         }
+        aria-label="Previous slide"
         className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
         style={{
           background: "rgba(255,255,255,0.15)",
@@ -157,6 +159,7 @@ export function HeroCarousel({
       </button>
       <button
         onClick={() => go((idx + 1) % heroSlides.length)}
+        aria-label="Next slide"
         className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110"
         style={{
           background: "rgba(255,255,255,0.15)",
@@ -172,15 +175,22 @@ export function HeroCarousel({
         {heroSlides.map((_, i) => (
           <button
             key={i}
+            type="button"
             onClick={() => go(i)}
-            className="rounded-full transition-all"
-            style={{
-              width: i === idx ? "24px" : "8px",
-              height: "8px",
-              background:
-                i === idx ? "#D4AF37" : "rgba(255,255,255,0.4)",
-            }}
-          />
+            aria-label={`Go to slide ${i + 1}`}
+            aria-current={i === idx}
+            className="p-2 flex items-center"
+          >
+            <span
+              className="block rounded-full transition-all"
+              style={{
+                width: i === idx ? "24px" : "8px",
+                height: "8px",
+                background:
+                  i === idx ? "#D4AF37" : "rgba(255,255,255,0.4)",
+              }}
+            />
+          </button>
         ))}
       </div>
     </section>

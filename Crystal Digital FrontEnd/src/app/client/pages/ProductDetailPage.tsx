@@ -164,7 +164,7 @@ export function ProductDetailPage() {
                 }}
               >
                 <ImageWithFallback
-                  src={cdn(product.img)}
+                  src={cdn(product.img, 1000)}
                   alt={product.name}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
@@ -214,7 +214,7 @@ export function ProductDetailPage() {
                 />
                 <span
                   className="text-xs font-bold tracking-widest uppercase"
-                  style={{ color: "#D4AF37" }}
+                  style={{ color: "#8C6D0E" }}
                 >
                   Crystal Digital Art & Award House
                 </span>
@@ -235,7 +235,7 @@ export function ProductDetailPage() {
                 >
                   <p
                     className="text-xs font-bold uppercase tracking-widest mb-1"
-                    style={{ color: "#D4AF37" }}
+                    style={{ color: "#8C6D0E" }}
                   >
                     Available Sizes
                   </p>
@@ -288,7 +288,7 @@ export function ProductDetailPage() {
               >
                 <p
                   className="text-xs font-bold uppercase tracking-widest mb-4"
-                  style={{ color: "#D4AF37" }}
+                  style={{ color: "#8C6D0E" }}
                 >
                   Key Features
                 </p>
@@ -404,7 +404,7 @@ export function ProductDetailPage() {
               <div className="text-center">
                 <p
                   className="text-xs font-bold uppercase tracking-widest mb-1"
-                  style={{ color: "#D4AF37" }}
+                  style={{ color: "#8C6D0E" }}
                 >
                   Technical Details
                 </p>
@@ -441,7 +441,7 @@ export function ProductDetailPage() {
                 >
                   <p
                     className="text-xs font-bold uppercase tracking-widest mb-2"
-                    style={{ color: "#D4AF37" }}
+                    style={{ color: "#8C6D0E" }}
                   >
                     {spec.label}
                   </p>

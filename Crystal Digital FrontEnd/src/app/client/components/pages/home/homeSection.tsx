@@ -41,7 +41,7 @@ export function SectionLabel({
       <span
         className="section-label text-xs font-bold tracking-widest uppercase"
         style={{
-          color: "#D4AF37",
+          color: "#8C6D0E",
           fontFamily: "Poppins, sans-serif",
         }}
       >

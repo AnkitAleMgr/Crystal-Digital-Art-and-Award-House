@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ImageWithFallback } from "../../../../app/components/figma/ImageWithFallback";
 import { Menu, X } from "lucide-react";
-import logo from "../../../../imports/image.png";
+import logo from "../../../../imports/image.webp";
 
 // Fixed header: brand, desktop links, "Get a Quote" (scrolls to the featured
 // products) and a collapsible mobile menu.
