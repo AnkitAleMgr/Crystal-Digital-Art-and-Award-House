@@ -64,8 +64,8 @@ Crystal Digital BackEnd/
 │   │   ├── db.js                ← DB_CONNECT (MONGO_DB_URI)
 │   │   └── crud.js              ← generic CRUD factory (getAll/createOne/updateOne/deleteOne); also exports the shared `mapDoc` (strips `_id`/`__v`, returns `id`) and `fail` (Mongoose `ValidationError` → 400 + `errors{}` field map, `CastError` → 404, else 500). `updateOne`/`deleteOne` 404 on a non-24-hex id instead of leaking "Cast to ObjectId failed". Optional `{ withImages }` deletes the old Cloudinary asset on replace/delete.
 │   ├── claudinery/
-│   │   └── claudineryService.js ← Cloudinary wrapper (note: folder name typo is intentional/kept): uploadImage/deleteImage/deliveryUrl/isConfigured
-│   │   ├── mailer.js            ← Resend transport: sendMail({to,subject,html,replyTo,headers}), isMailConfigured, mailFrom (MAIL_FROM → onboarding@resend.dev), ownerEmail. Never throws.
+│   │   └── claudineryService.js ← Cloudinary wrapper (note: folder name typo is intentional/kept): uploadImage/deleteImage/isConfigured
+│   │   ├── mailer.js            ← Nodemailer/SMTP transport: sendMail({to,subject,html,replyTo,headers}), isMailConfigured, mailFrom (MAIL_FROM → SMTP_USER fallback), ownerEmail. Never throws.
 │   │   ├── notifications.js     ← every email the site sends: notifyOwnerOfQuote, notifyCustomerOfStatus, notifySubscriberOfConfirmation, notifySubscribersOfProduct. All take a DB doc, never req.body.
 │   │   ├── subscribeTokens.js   ← signs/verifies the confirm + unsubscribe link tokens (purpose-scoped, no DB column)
 │   │   └── siteUrl.js           ← SITE_URL helper; every link in every email is built from it
@@ -103,7 +103,7 @@ Crystal Digital BackEnd/
 - If the `CLOUDINARY_*` env vars are missing, `isConfigured` is false and uploads return **503** with a clear message instead of throwing a confusing SDK error; image cleanup becomes a silent no-op.
 - **`cloudinary@2.11.0` cannot upload a `Buffer`.** `uploader.upload(buffer)` throws `ERR_INVALID_ARG_TYPE ... basename` (it calls `path.basename()` on the argument), and `uploader.upload_stream()`'s callback path is broken — it fails with `TypeError: callback is not a function` at `utils/index.js:1390` because the internal `v1_result_adapter` gets the options object in the callback slot. **Pass a base64 data URI string instead** (`data:${mime};base64,${buf.toString("base64")}`) and `await` the returned promise. That is the only combination verified working. Do not "fix" this back to a stream/buffer.
 - The API key needs upload **and** delete permission on the `crystal-digital/*` folders. A key created with Cloudinary's **Media Library User** role is not sufficient — it authenticates (`/ping` returns ok) but every asset operation is rejected: upload → HTTP 403, `/usage` → `Request forbidden due to missing permissions (actions=["read"])`. **Use the Master Admin role** on the key (Settings → API Keys → ⋮ → Assign Roles).
-- Serving: inject `f_auto,q_auto` into the URL **path** to get WebP/AVIF + automatic quality (see the gotcha section below). The `deliveryUrl()` helper does this; the admin previews currently use the raw `secure_url`.
+- Serving: inject `f_auto,q_auto` into the URL **path** to get WebP/AVIF + automatic quality (see the gotcha section below). The frontend's `cdn()` helper does this; the backend and the admin previews deliberately use the raw `secure_url`.
 - **Only 2 upload call sites** — `adminProduct.tsx` (folder `products`) and `galleryModal.tsx` (folder `gallery`). Testimonials have no image field, so they need no upload.
 - Note: the site's own bundled images in `src/imports/` are still local files (several are 3–5MB each, and dominate the ~19MB build output). Moving those to Cloudinary is a separate, worthwhile follow-up.
 
@@ -213,7 +213,7 @@ DELETE /admin/subscribers/:id       → remove a row (protected)
 - **`subscribeRateLimit` is 5/IP/hour**, separate from `quoteRateLimit`'s 10/IP/hour, and both are instances of the `rateLimit()` factory in `src/middleware/rateLimit.js`.
 - **The product-broadcast email carries RFC 8058 one-click headers** (`List-Unsubscribe` + `List-Unsubscribe-Post`) so Gmail can offer a native "Unsubscribe" button. ⚠ **`List-Unsubscribe-Post` currently points at the same SPA page URL as the visible link.** A compliant one-click POST needs a URL that *accepts* a provider POST, which a client-side route does not. If native one-click matters, the fix is a small token-in-query POST endpoint on the API, not a change to the page.
 - **`SITE_URL` (`utils/siteUrl.js`) builds every link in every email** and strips its own trailing slash, so `SITE_URL=http://localhost:5173` does not produce `//subscribe/confirm`. It is currently the Vite dev URL — **set it to the real origin before deploying**, or every confirmation link will point at localhost and no real customer can confirm.
-- Verified in a real browser: footer invalid/duplicate/network states, both result pages, and the admin table all behave; and a full live cycle (subscribe → receive → confirm → product created → broadcast received → unsubscribe) was confirmed against the owner inbox with real Resend message ids.
+- Verified in a real browser: footer invalid/duplicate/network states, both result pages, and the admin table all behave; and a full live cycle (subscribe → receive → confirm → product created → broadcast received → unsubscribe) was confirmed against the owner inbox with real message ids.
 
 ### `?f_auto&q_auto` is NOT how you optimise a Cloudinary URL (gotcha)
 Appending `?f_auto&q_auto` to a Cloudinary URL **silently does nothing** — Cloudinary ignores unknown query params and serves the original upload. The transform must be injected into the URL **path**:
@@ -221,7 +221,7 @@ Appending `?f_auto&q_auto` to a Cloudinary URL **silently does nothing** — Clo
 https://res.cloudinary.com/<cloud>/image/upload/f_auto,q_auto/v123/cloudinary/<id>.png   ← works
 https://res.cloudinary.com/<cloud>/image/upload/v123/cloudinary/<id>.png?f_auto&q_auto  ← ignored
 ```
-Verified with a browser `Accept: image/webp` header: the first returns `image/webp` at ~240 KB, the second returns the original `image/png` at ~2.7 MB. Both `cdn()` (frontend) and `deliveryUrl()` (backend) now do the path injection via `url.replace("/upload/", "/upload/f_auto,q_auto/")`, guarded against double-application. **Do not "simplify" these back to the `?` query form.**
+Verified with a browser `Accept: image/webp` header: the first returns `image/webp` at ~240 KB, the second returns the original `image/png` at ~2.7 MB. The frontend's `cdn()` does the path injection via `url.replace("/upload/", "/upload/f_auto,q_auto/")`, guarded against double-application. (The backend's `deliveryUrl()` helper that used to mirror it was deleted as dead code — nothing called it; every backend consumer wants the raw URL.) **Do not "simplify" these back to the `?` query form.**
 
 ### Content migration: where the original content now lives
 - The website content used to be hardcoded in the frontend. Those arrays are **gone** (`data/products.ts`, `data/productSize.ts`, the `galleryItems` array in `GalleryPage.tsx`, the `testimonials` array in `homeTestimonials.tsx`).
@@ -258,10 +258,10 @@ curl -X POST http://localhost:3000/admin/register \
 The whole swap is config-only; no code changes. `.gitignore` has `.env*`, so `.env`, `.env-real` and `.env.example` are all untracked and safe.
 
 - The current working values live in **`.env-real`**; **`.env`** is the sandbox/client file you fill. Swap back with `rm .env && mv .env-real .env`.
-- Only 7 values actually change: `MONGO_DB_URI`, `CLOUDINARY_CLOUD_NAME`/`API_KEY`/`API_SECRET`, `RESEND_API_KEY`, `MAIL_FROM`, `OWNER_EMAIL`.
+- Only the email values actually change: `MONGO_DB_URI`, `CLOUDINARY_CLOUD_NAME`/`API_KEY`/`API_SECRET`, `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`, `MAIL_FROM`, `OWNER_EMAIL`.
 - **The four secrets are any string, long and random — the only rule is no `#`.** dotenv truncates unquoted values at `#` (verified: `A=abc#def` → `abc`). `ACCESS_TOKEN_SECRET` signs the login JWT and `ADMIN_REGISTER_SECRET` gates admin creation, so **never rotate them after boot** — changing `ACCESS_TOKEN_SECRET` silently invalidates every session. `SUBSCRIBER_TOKEN_SECRET` is separate on purpose so rotating the JWT secret does not kill every unsubscribe link already sitting in an inbox.
-- ⚠ **`MAIL_FROM` must never be a personal address (e.g. a `@gmail.com`).** Resend rejects it outright: `The gmail.com domain is not verified`, so *nothing* is delivered and the failure is only visible in the server log. Only a domain you own and verified in Resend may be the sender. Blank `MAIL_FROM` falls back to `onboarding@resend.dev`, which delivers **only to the Resend account owner's own inbox** — a second Resend address, not `OWNER_EMAIL`. Until the client's domain is verified, that sandbox limit means you cannot mail anyone else, which is the expected behaviour and not a bug.
-- Getting a domain verified (one-time, per client): Resend → Domains → Add → paste the DNS records at the domain host → wait for **Verified** → then set `MAIL_FROM=Client Name <no-reply@clientdomain.com>`. Verification is about **you**, never the recipient, so once done any `@gmail.com`/`@yahoo.com` address can be mailed. Propagating can take hours, so start it before launch.
+- ⚠ **`MAIL_FROM` must be an address the SMTP server is allowed to send as.** With Gmail app passwords that is your own address only; with hosting/cPanel mail it is the internal-domain addresses. Sending as a stranger's domain gets the server's bounce policy or the receiving side rejecting the mail. Blank `MAIL_FROM` falls back to `SMTP_USER` when it looks like an email — enough to prove the setup, wrong for production copy.
+- Sort out the SMTP "from" policy before launch: most VPS/hosting plans require the from-domain to match an account or a verified domain, or mail silently dumps into spam. Whatever `MAIL_FROM` you pick, test it against a real external inbox (owner's Gmail) before the go-live.
 
 ### Deploy-time env (three values, not one)
 - `SITE_URL` — the **website** the public visits, used only to build links inside emails. `PORT` is the **API**. Same app, different doors; `SITE_URL` must be the real origin with no port (`https://client.com`), or every confirmation/unsubscribe link leads nowhere.
@@ -299,7 +299,7 @@ src/app/client/
 ├── types/          → TypeScript interfaces only (e.g. types/Product.ts, types/Public.ts)
 ├── data/           → `siteDefaults.ts` only (`SITE_DEFAULTS`, `withSettingsDefaults`, `whatsappLink` — the fallbacks for settings-driven copy). Product/gallery/testimonial arrays are gone; everything comes from MongoDB.
 ├── hooks/          → shared React hooks (useInView, useCounter)
-├── utils/          → `api.ts` (`publicApi` incl. `createQuote(body, file?)`, `createSubscriber`, `confirmSubscriber`, `unsubscribeSubscriber`, `categories()` and `settings()`, `PublicApiError`, `cdn`) — the ONLY place the public site talks HTTP; `categories.ts` (`categoryFilters`/`inCategory`/`catLabel` — the shared filter-pill logic, see "Categories")
+├── utils/          → `api.ts` (`publicApi` incl. `createQuote(body, file?)`, `createSubscriber`, `confirmSubscriber`, `unsubscribeSubscriber`, `categories()` and `settings()`, `PublicApiError`, `cdn`) — the ONLY place the public site talks HTTP; `categories.ts` (`categoryFilters`/`inCategory`/`catLabel` — the shared filter-pill logic, see "Categories"); `seo.ts` (`applyPageMeta` — the ONLY SEO writer, see "On-page SEO")
 ├── components/
 │   ├── layout/     → site-wide chrome: Navbar, Footer (holds the newsletter form), BackToTop, globalStyle (globalStyles + GlobalStyles), siteDataProvider (useSiteData)
 │   └── pages/      → section components grouped by route
@@ -330,7 +330,6 @@ src/app/client/
 | `ImageWithFallback` | `src/app/components/figma/ImageWithFallback.tsx` | images with broken-image fallback |
 
 ### Shared / library code (don't touch casually)
-- `src/app/components/ui/` — shadcn-style UI primitives (button, card, dialog, etc.). Generated boilerplate, imported from `@/components/ui/...` style components.
 - `src/app/components/figma/` — `ImageWithFallback` helper.
 
 ### Styles / assets
@@ -369,8 +368,8 @@ src/app/client/
 - **The two email-link landing pages are dumb on purpose.** `subscribeConfirmPage.tsx` and `unsubscribePage.tsx` read `?token=` from the URL, POST it to the API on mount, and render success / failure / already-done states. They hold no business logic and must not start calling the API on render without the POST — see the scanner reason in the Newsletter section above.
 - **The admin Subscribers page (`admin/pages/subscriber.tsx`) is list + delete only.** It shows a total plus per-status counts, filters by status, exports the current list to CSV, and deletes with a confirmation. There is no create or edit control, matching the GET/DELETE-only API. The provider additions are `subscribers`, `fetchSubscribers()` and `deleteSubscriber(id)`. **Admin Quotes page (`admin/pages/quoteRequest.tsx`) also has an Export CSV button** that downloads the currently filtered list; both use the shared `utils/csv.ts` writer.
 - **`NAV_ITEMS` in `admin/constants/admin.tsx` gained a "Subscribers" entry** so the page is reachable from the sidebar; that file must stay `.tsx` because the nav items are JSX icons.
-### Email: Resend, server-side only (replaced FormSubmit on 2026-09-28)
-- **All email is now sent from the backend via Resend** (`resend` npm package). `src/utils/mailer.js` is the only reader of `RESEND_API_KEY`; it must never be imported by frontend code.
+### Email: Nodemailer (SMTP), server-side only (replaced FormSubmit on 2026-09-28; Resend dropped 2026-10-06)
+- **All email is now sent from the backend via Nodemailer over SMTP** (`nodemailer` npm package). `src/utils/mailer.js` is the only reader of `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`; it must never be imported by frontend code. Until the four SMTP vars are set, `isMailConfigured()` is false and every send is a logged no-op returning `{ sent: false, reason: "not_configured" }`.
 - **There are exactly four emails**, all in `src/utils/notifications.js`:
   | Function | Trigger | To | Reply-To |
   |---|---|---|---|
@@ -378,13 +377,13 @@ src/app/client/
   | `notifyCustomerOfStatus(quote)` | `PUT /admin/quotes/:id`, **only when `status` actually changes** | `quote.email` (from the stored doc) | the owner |
   | `notifySubscriberOfConfirmation(subscriber)` | inside `createPublicSubscriber`, after the row is saved | the subscriber | n/a |
   | `notifySubscribersOfProduct(product)` | inside `createProduct`, after the row is saved | every `active` subscriber | n/a |
-- **`resend.emails.send()` takes `CreateEmailOptions`, which is camelCase — use `replyTo`, not `reply_to`.** The snake_case spelling belongs to the low-level `EmailApiOptions` type and is silently dropped by the SDK, which would make every reply land back on the sender instead of the customer. The fake-key test cannot catch this (it fails at auth before body validation).
+- **`sendMail` takes `{ to, subject, html, replyTo, headers }` and Nodemailer expects lowerCamel options** — spell every option exactly as above (`replyTo`, not `reply_to`). A mistyped key is silently ignored by Nodemailer, which would make every reply land back on the sender instead of the customer. Port 465 is `secure: true` (implicit TLS); 587/25 use STARTTLS, which Nodemailer negotiates automatically.
 - **`client/utils/notifyOwner.ts` and `admin/utils/sendNotification.tsx` were deleted.** Do not reintroduce browser-side email: the API key would have to reach the client, and the recipient address would become caller-controlled, i.e. an open relay that will email anyone.
 - **The recipient is never read from the request body.** `updateQuote` reads the stored document, so `PUT /admin/quotes/:id` cannot be used to mail a third party. That is also why `admin/quotes/controller.js` does *not* use the generic `crud.js` `updateOne`, which cannot see `before.status` and so cannot detect a real transition. `isObjectId` is now exported from `crud.js` for it.
 - **Everything is fire-and-forget and nothing throws.** A mail outage must never cost a customer their quote or subscription. `sendMail` catches everything, logs, and returns `{ sent, reason }`. `e2e.mjs` asserts a quote still saves (201), a status change still succeeds (200), and a subscribe/confirm/unsubscribe cycle still completes, with the send suppressed.
-- **⚠ Sending is skipped for IANA reserved test domains** (`@example.com|.net|.org`, `@test`, `@invalid`) via `isTestAddress()` in `notifications.js`. It is checked against the **quote's** address, not the recipient, so it also silences the owner alert. This is not a test-only backdoor — those domains are RFC 2606/6761 reserved and can never be a real customer mailbox. Without it, configuring a real `RESEND_API_KEY` would mail the owner ~15 times per e2e run and Resend would try to deliver to undeliverable addresses. Verified with a key configured: full suite green, zero Resend calls; a real address still sends. Do not widen this pattern.
+- **⚠ Sending is skipped for IANA reserved test domains** (`@example.com|.net|.org`, `@test`, `@invalid`) via `isTestAddress()` in `notifications.js`. It is checked against the **quote's** address, not the recipient, so it also silences the owner alert. This is not a test-only backdoor — those domains are RFC 2606/6761 reserved and can never be a real customer mailbox. Without it, configuring real SMTP credentials would mail the owner ~15 times per e2e run and the server would try to deliver to undeliverable addresses. Verified with credentials configured: full suite green, zero send attempts; a real address still sends. Do not widen this pattern.
 - **Duplicate suppression matters:** re-selecting the same status in the admin dropdown must not send a second email. The old frontend code did send one every time.
-- **`RESEND_API_KEY` is now set and real mail is being sent** (verified end to end against the owner inbox: both a confirmation email and a product broadcast arrived with real Resend message ids). **`MAIL_FROM` is still empty**, so the fallback `onboarding@resend.dev` is in use and delivery is limited to the Resend account owner's own inbox. A real customer receives nothing until a domain is verified in Resend and `MAIL_FROM` is set. `OWNER_EMAIL` is pre-filled with the address that used to be hardcoded in the two public forms.
+- **SMTP is not configured in the repo's `.env` right now, so nothing is currently being sent.** The Nodemailer transport was swapped in on 2026-10-06 (Resend dropped): real mail worked end to end under Resend (confirmation + broadcast reached the owner inbox with message ids), and the same `mailFrom`/`sendMail` contract now drives Nodemailer. Fill `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS` (and a `MAIL_FROM` the server is allowed to send as), restart nodemon, and verify a real send to an external inbox before launch. `OWNER_EMAIL` stays pre-filled with the address that used to be hardcoded in the two public forms.
 - **`.env` changes need a manual nodemon restart** (it only watches `js,mjs,cjs,json`). Add the key, then restart the backend or nothing will change.
 - Everything interpolated into the email HTML goes through `esc()`: the body carries customer-supplied name/message text.
 - The email footer reads the **settings doc**, so the phone/address in outgoing mail stays correct when the admin edits it. This retired the hardcoded `"Call +977-61-XXXXXX or visit crystaldigital.com.np"` line.
@@ -402,17 +401,17 @@ The quote form used to send only the artwork's **filename**. It now sends the by
 - **`rateLimit()` grew two options**: `scope: "global"` (one shared bucket) and `onLimit` (call this instead of answering 429). The sweeper now uses the widest window in use, otherwise a 24h bucket would be emptied an hour in and the daily cap would silently reset.
 - **`AWS Rekognition auto-moderation is deliberately off.** It is a paid Cloudinary add-on, and the realistic threat here is *volume burning quota*, which the caps already solve. Turn it on in the Cloudinary dashboard if that ever changes.
 - **Deleting a quote destroys its asset.** `deleteOne(QuoteModel, { withImages: true, imageField: "attachmentPublicId" })` — `crud.js` grew an `imageField` option because products/gallery name the column `imgPublicId` and quotes do not. Without this, every deleted quote leaked storage forever.
-- **The owner email links the artwork** when it was stored, and otherwise says the file was not stored and to ask for it. The link is the **raw** URL, not `deliveryUrl()`.
+- **The owner email links the artwork** when it was stored, and otherwise says the file was not stored and to ask for it. The link is the **raw** URL, not the `f_auto,q_auto` form.
 - **Admin view:** the eye button's existing modal shows the image inline (capped 500×420, `object-contain`) plus an **"Open full size ↗"** link to the raw original in a new tab. No lightbox — a second `fixed inset-0` inside the modal is the overlay-nesting trap this project already hit with the category rename dialog. Both the preview and the link deliberately skip `f_auto,q_auto`.
 - **Frontend:** `publicApi.createQuote(body, file)` sends `FormData` via a new `postForm` helper that sets **no** `Content-Type` (the runtime must supply the multipart boundary). `productQuoteModal.tsx` holds the real `File`, blocks >5MB client-side with a message rather than uploading it, and the `accept` list is explicit — no `image/*`, which would happily offer an SVG.
 - **CSV:** quotes export an `artwork_url` column next to `attachment`.
 
 ## Conventions (IMPORTANT)
 0. **Ask before making changes** — the user may be discussing/planning and NOT asking for implementation. When they ask a question or describe an idea, clarify first and get explicit confirmation (e.g. "want me to do it?") before editing files, moving/deleting code, or changing architecture. Never assume "I'd like to do X" means "go change the code".
-1. **Relative imports only** — always `../`/`../../` per folder depth. Do **not** use `@/` alias or absolute workspace paths for local files. The `@` alias maps `@ → src`, but the user asked to avoid it for imports.
+1. **Relative imports only** — always `../`/`../../` per folder depth. Do **not** use `@/` alias or absolute workspace paths for local files. (The `@` alias was removed from `vite.config.ts` during the 2026-10-06 dead-code cleanup because nothing used it.)
 2. **File naming** — `camelCase` with a distinguishing suffix per page/section: `homeCaurousel.tsx` (note the typo is intentional/kept), `homeService.tsx`, `homeSection.tsx`, `productQuoteModal.tsx`, `aboutUsStatCounter.tsx`.
 3. **Types go in `types/`**, static data in `data/`, hooks in `hooks/`, by-route sections in `components/pages/<route>/`, global chrome in `components/layout/`.
-4. **No comments added to code** unless asked.
+4. **No comments added to code** unless asked. A comment-normalization pass ran 2026-10-06: stale/restating comments were removed and concise WHAT/WHY comments added at every entry point, route, exported function and page; keep that tone — a short rationale, never a restatement of the code.
 5. **macOS FS is case-insensitive** — importing with wrong casing (e.g. `ProductSize` vs `productSize`) causes TS error TS1149. Match filenames exactly; restart TS server / Reload Window after renames to clear stale tsserver cache.
 6. **Keep this file (AGENTS.md) up to date** — after EVERY structural change (file moved/renamed/deleted/added, exports changed, conventions decided, new config), update this guide in the same session so future agents always have an accurate view.
 
@@ -420,15 +419,24 @@ The quote form used to send only the artwork's **filename**. It now sends the by
 - Folder structure and where each component/type/data/hook lives
 - What each piece is used by (keep the "defined where / used where" table accurate)
 - Any new conventions, config decisions, or pitfalls
-- Anything read-only/do-not-touch (e.g. `components/ui/`)
+- Anything read-only/do-not-touch (e.g. the admin primitives in `admin/components/ui/`)
+
+## On-page SEO (2026-10-06)
+- The site is a client-rendered SPA: every route serves the same `index.html`, so the head is written in **two layers**. `index.html` holds the static defaults (title, description, `index,follow`, canonical, all OG/Twitter tags) for first paint, and `client/utils/seo.ts` `applyPageMeta()` overwrites title/description/robots/canonical/OG per route once React mounts — that is the layer search engines and scrapers actually read.
+- **`applyPageMeta` is the ONE SEO writer.** Do not hardcode `document.title` or a `<meta>` tag in a page; add a `useEffect` calling `applyPageMeta({title, description, noindex?, type?})`. Every public page does this (Home/About/Gallery/Contact + ProductDetail, which uses the product name/desc), and the two email-link pages + `AdminApp` (admin login *and* dashboard) pass `noindex: true` so the dashboard never surfaces in search.
+- Canonical/OG URLs use `window.location.origin` at runtime (correct on localhost and prod without a rebuild). The **static** files `public/robots.txt` + `public/sitemap.xml` DO hardcode the production origin `https://crystaldigital.com.np/` — update them if the deploy domain changes. `robots.txt` disallows `/admin` and the token pages; `sitemap.xml` lists the 4 static pages only (product URLs are DB-driven and not preloadable; regenerating it per deploy is future work).
+- The OG image in `index.html`/`twitter:image` is a Cloudinary gallery asset with `f_auto,q_auto` injected; if the gallery content is ever wiped, replace it with another hosted image.
+- Verified in real Chrome: all 5 routes (/, /about, /gallery, /contact, /admin) render the right tags, and /admin is `noindex, nofollow` in both authed and unauthed states.
 
 ## Critical config (why image imports work now)
 - `src/vite-env.d.ts` — `/// <reference types="vite/client" />`
 - `FrontEnd/tsconfig.json` — created because the project had **none**. Includes `"types": ["vite/client"]` (declares `.png`/`.jpg`/`.svg` modules so image imports typecheck) and `"allowUmdGlobalAccess": true` (lets `React.*` be used without explicit imports, which much of the code does).
-- `vite.config.ts` — `@` alias → `./src`, assetsInclude for `*.svg`/`*.csv`, custom `figmaAssetResolver` for `figma:asset/` ids.
+- `vite.config.ts` — assetsInclude for `*.svg`/`*.csv` only (the `@` alias and the Figma Make `figmaAssetResolver` plugin were removed in the 2026-10-06 cleanup — neither was used).
 
 ## Notes / current state
 - `MainPage.tsx` was **deleted** — everything was extracted into the structure above.
+- **Comment normalization (2026-10-06):** a comment-only pass spanned both apps (~38 frontend + ~38 backend files). Stale references (localStorage, FormSubmit, shadcn, `deliveryUrl`, Make template) were removed; ~300 concise WHAT/WHY comments were added at entry points, route registrations, exported functions/controllers/middleware/models and pages. Also fixed a duplicated `enum` key in `auth/model.js` and a wrong "fixed-window" claim in `rateLimit.js` (it is sliding).
+- **Dead-code cleanup (2026-10-06):** the unused shadcn boilerplate `src/app/components/ui/` (48 files), the empty `MainPage.tsx`/`styles/globals.css`, the dead Figma `figmaAssetResolver` + `@` alias in `vite.config.ts`, and ~45 unused npm packages were removed — the frontend now has exactly 4 runtime deps (`react`, `react-dom`, `react-router-dom`, `lucide-react`). Note `admin/components/ui/` is a **different, live** folder (the admin primitives) and was kept. Backend: `_a.mjs`, `deliveryUrl()`, `isSubscriberTokenConfigured()`, the `/testingapi` endpoint and two dead imports were removed; `nodemon` moved to devDependencies. Do not re-add any of it.
 - Admin login is wired to the backend (`POST /admin/admin-login`); the old hardcoded `ADMIN_USER`/`ADMIN_PASS` constants were removed. The backend must be running (port 3000) for login to work; DB/MongoDB collection `admins` holds the credentials.
 - TS strictly readable code remains possible. **`typescript` IS now installed as a devDependency** in the FrontEnd, so **`npx tsc --noEmit` is a real type check** (it was previously silently checking nothing because `tsc` was not installed) and **`npm run build` is still the required gate** because `vite build` only strips types via esbuild and will pass on type errors. Run both. Note `tsc --noEmit` is stricter than the build: it caught wrong relative-import depth in `adminProvider.tsx` that the build accepted.
 - Vite build output is large (~2.5 MB+ of images) — normal for this project.

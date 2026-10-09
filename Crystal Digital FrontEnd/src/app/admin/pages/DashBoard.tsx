@@ -14,7 +14,8 @@ function quoteSummary(q: { message: string; customization?: { label: string; val
   return answers.join(" · ");
 }
 
-// ── Overview ──────────────────────────────────────────────────────────────────
+// Overview page: stat cards that navigate into each section, plus the latest
+// quote requests.
 export function AdminOverview() {
   const { products, gallery, testimonials, quotes, quoteCount } = useAdmin();
   const navigate = useNavigate();

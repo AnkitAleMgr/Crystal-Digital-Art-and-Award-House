@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CheckCircle, Loader2, XCircle } from "lucide-react";
 import { publicApi } from "../utils/api";
+import { applyPageMeta } from "../utils/seo";
 
 // Reached from the unsubscribe link at the bottom of every newsletter email, and
 // from the List-Unsubscribe header Gmail/Outlook render as their own button.
@@ -12,12 +13,22 @@ import { publicApi } from "../utils/api";
 type State = "working" | "done" | "error";
 
 export function UnsubscribePage() {
+  // Utility page: must stay out of search results.
+  useEffect(() => {
+    applyPageMeta({
+      title: "Unsubscribe | Crystal Digital",
+      description: "Unsubscribe from Crystal Digital newsletter emails.",
+      noindex: true,
+    });
+  }, []);
+
   const [params] = useSearchParams();
   const [state, setState] = useState<State>("working");
   const [message, setMessage] = useState("");
   const sent = useRef(false);
 
   useEffect(() => {
+    // Guards a remount (React can run an effect twice) from unsubscribing twice.
     if (sent.current) return;
     sent.current = true;
 

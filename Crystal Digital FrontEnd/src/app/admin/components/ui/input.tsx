@@ -1,3 +1,4 @@
+// Styled text input with an optional label, sharing the admin field styling.
 export function Input({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label?: string }) {
   return (
     <div className="flex flex-col gap-1.5">

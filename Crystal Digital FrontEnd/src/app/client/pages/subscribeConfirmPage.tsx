@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CheckCircle, Loader2, XCircle } from "lucide-react";
 import { publicApi } from "../utils/api";
+import { applyPageMeta } from "../utils/seo";
 
 // Reached from the link in the confirmation email, never linked directly from
 // anywhere on the site.
@@ -14,6 +15,15 @@ import { publicApi } from "../utils/api";
 type State = "working" | "done" | "error";
 
 export function SubscribeConfirmPage() {
+  // Utility page: must stay out of search results.
+  useEffect(() => {
+    applyPageMeta({
+      title: "Confirm Subscription | Crystal Digital",
+      description: "Confirm your newsletter subscription.",
+      noindex: true,
+    });
+  }, []);
+
   const [params] = useSearchParams();
   const [state, setState] = useState<State>("working");
   const [message, setMessage] = useState("");

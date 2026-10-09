@@ -64,6 +64,9 @@ type AdminContextValue = {
 
 const AdminContext = createContext<AdminContextValue | undefined>(undefined);
 
+// Owns all admin state: session/auth, every MongoDB-backed collection and the
+// async mutator for each. Pages consume it via useAdmin() instead of props.
+// Mutations are real API calls, never local-state tricks.
 export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [authed, setAuthed] = useState(
     () => sessionStorage.getItem("cdaah_admin") === "1"
@@ -358,6 +361,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Access hook; throws if used outside the provider (i.e. outside /admin).
 export function useAdmin() {
   const ctx = useContext(AdminContext);
   if (!ctx) throw new Error("useAdmin must be used within AdminProvider");

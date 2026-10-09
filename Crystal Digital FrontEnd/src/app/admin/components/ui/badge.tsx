@@ -1,6 +1,7 @@
 import { STATUS_BG, STATUS_COLORS } from "../../constants/admin";
 import { QuoteRequest } from "../../types/interface/quoteRequest/quoteRequest";
 
+// Colored pill for a quote status, colored from STATUS_COLORS/STATUS_BG.
 export function Badge({ status }: { status: QuoteRequest["status"] }) {
   return (
     <span

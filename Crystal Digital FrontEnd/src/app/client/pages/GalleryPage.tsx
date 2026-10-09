@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { useSiteData } from "../components/layout/siteDataProvider";
@@ -10,15 +11,26 @@ import {
   inCategory,
 } from "../utils/categories";
 import { PublicGalleryItem } from "../types/Public";
+import { applyPageMeta } from "../utils/seo";
 import { Section } from "../components/pages/home/homeSection";
 import { X } from "lucide-react";
 import img7 from "../../../imports/image-7.png";
 
+// Gallery grid with category pills and a lightbox; items can link to a
+// product's page via linkedProductId.
 export function GalleryPage() {
+  // SEO: per-route title/description replace the index.html defaults on mount.
+  useEffect(() => {
+    applyPageMeta({
+      title: "Gallery | Crystal Digital — Crystal Awards, Trophies & Plaques",
+      description:
+        "Browse finished crystal awards, trophies, plaques and engraved gifts — every piece designed in-house and made to order at Crystal Digital Art & Award House.",
+    });
+  }, []);
   const navigate = useNavigate();
   const [filter, setFilter] = useState(ALL_FILTER);
   const [lightbox, setLightbox] = useState<PublicGalleryItem | null>(null);
-  const { gallery: galleryItems, categories, products, loading } = useSiteData();
+  const { gallery: galleryItems, categories, products } = useSiteData();
 
   // Same shared category list as the home page — the admin manages one list for
   // products and gallery items, and this page used to keep a third hardcoded

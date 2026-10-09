@@ -1,4 +1,6 @@
-// Fixed-window-per-client rate limiting with no dependency.
+// Sliding-window rate limiting with no dependency: every hit keeps its own
+// timestamp, so the limit is "max hits in the last windowMs", not a calendar
+// window that resets on the hour.
 //
 // `hits` is one module-level Map shared by every limiter built here, so each one
 // namespaces its own buckets with `keyPrefix`. Without that, mounting a second
@@ -89,6 +91,8 @@ export const rateLimit = ({
   };
 };
 
+// 10 per IP per hour. Worded to send urgent enquiries to the phone, because
+// unlike a subscription a quote is something the visitor is waiting on.
 export const quoteRateLimit = rateLimit({
   keyPrefix: "quotes",
   message:

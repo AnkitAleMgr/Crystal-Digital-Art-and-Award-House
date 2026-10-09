@@ -1,3 +1,7 @@
+// Entry point: CORS + JSON body, then the two routers — /api (public, no auth)
+// and /admin (login first, everything else behind authMiddleware). The DB
+// connection is awaited before listening, so nothing serves against a dead DB.
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -13,11 +17,6 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
-
-app.get("/testingapi", (req, res) => {
-    res.json({message: "API is working!"});
-});
-
 
 app.use("/api", PublicRoute);
 app.use("/admin",AdminRoute)

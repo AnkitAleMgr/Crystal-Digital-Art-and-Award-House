@@ -6,6 +6,7 @@ import { Footer } from "./components/layout/Footer";
 
 
 
+// Shell for the public site: global styles, navbar, routed page and footer.
 export default function Layout() {
   return (
     <>

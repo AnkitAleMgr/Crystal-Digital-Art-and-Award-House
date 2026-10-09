@@ -1,3 +1,9 @@
+// `npm run seed` — loads src/seed/data.mjs into MongoDB and uploads its images
+// to Cloudinary through the running API (needs the server up plus a
+// PROBE_TOKEN). Guarded: it refuses to run once products already have slugs;
+// `-- --force` wipes the previously-seeded rows AND their Cloudinary assets
+// first, so a reseed never orphans uploads. Admin-created rows are untouched.
+
 import "dotenv/config";
 import mongoose from "mongoose";
 import { readFileSync } from "fs";

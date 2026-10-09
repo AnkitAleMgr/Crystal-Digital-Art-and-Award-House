@@ -1,3 +1,8 @@
+// The only place the Cloudinary SDK is talked to (the folder name typo in
+// "claudinery" is deliberate/kept). The env vars are read at import time, so a
+// newly added CLOUDINARY_* key needs a server restart to take effect — and with
+// none set, isConfigured is false and every operation answers no-ops/503s
+// instead of throwing SDK errors.
 import { v2 as cloudinary } from "cloudinary";
 
 const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } =
@@ -18,6 +23,8 @@ if (isConfigured) {
 
 const ROOT_FOLDER = "crystal-digital";
 
+// Folder whitelist for caller-supplied `folder` values; anything else lands in
+// "misc". Keeps a caller from writing into an arbitrary Cloudinary path.
 export const ALLOWED_FOLDERS = ["products", "gallery", "testimonials", "quote-artwork"];
 
 const MAX_WIDTH = 1600;
@@ -27,6 +34,9 @@ const MAX_WIDTH = 1600;
 // string or a percent-escape is stripped rather than escaped.
 const SAFE_ID = /[^a-z0-9_-]+/g;
 
+// Uploads one image and returns { url, publicId, width, height, bytes, format }.
+// Throws an error carrying `.status` (503 when unconfigured, 400/502 when
+// Cloudinary refuses) so callers can answer it directly.
 export const uploadImage = async (
   buffer,
   { folder, filename, mimetype, publicId, maxWidth = MAX_WIDTH } = {}
@@ -52,6 +62,11 @@ export const uploadImage = async (
     (filename || "file").replace(/\.[^/.]+$/, "").toLowerCase().replace(SAFE_ID, "-") ||
     "file";
 
+  // Sent as a base64 data URI, NOT as a Buffer and NOT through upload_stream:
+  // cloudinary@2.11.0 calls path.basename() on a Buffer argument (throws
+  // ERR_INVALID_ARG_TYPE) and its upload_stream callback path fails with
+  // "TypeError: callback is not a function". This is the only combination
+  // verified working — do not "fix" it back to a stream or a raw buffer.
   const dataUri = `data:${type};base64,${buffer.toString("base64")}`;
 
   let result;
@@ -86,6 +101,9 @@ export const uploadImage = async (
   };
 };
 
+// Destroys one asset. Never throws: a failed cleanup is logged and returned as
+// { error }, or { skipped } when unconfigured/unknown — the caller has already
+// finished the user-facing part of its job by then.
 export const deleteImage = async (publicId) => {
   if (!isConfigured || !publicId) {
     return { skipped: true };
@@ -102,15 +120,4 @@ export const deleteImage = async (publicId) => {
     console.error("Cloudinary delete failed:", error.message);
     return { error: error.message };
   }
-};
-
-// Cloudinary delivery transforms belong in the URL *path*, not the query
-// string. "?f_auto&q_auto" is ignored and serves the original upload; the
-// working form is /image/upload/f_auto,q_auto/<version>/<public_id>.
-export const deliveryUrl = (url) => {
-  if (!url || !url.includes("/upload/") || url.includes("/upload/f_auto,")) {
-    return url;
-  }
-
-  return url.replace("/upload/", "/upload/f_auto,q_auto/");
 };

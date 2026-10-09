@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { AlertCircle, Eye, Lock, Mail } from "lucide-react";
 import { API_BASE } from "../../utils/api";
 
+// Login screen: POSTs email/password to /admin/admin-login and stores the
+// returned JWT in sessionStorage on success.
 export function AdminLogin({ onLogin }: { onLogin: () => void }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -39,14 +41,12 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
       className="min-h-screen flex items-center justify-center p-4"
       style={{ background: "linear-gradient(135deg, #0F172A 0%, #1E3A8A 50%, #1D4ED8 100%)" }}
     >
-      {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 right-0 w-96 h-96 rounded-full opacity-10" style={{ background: "#D4AF37", filter: "blur(80px)", transform: "translate(30%, -30%)" }} />
         <div className="absolute bottom-0 left-0 w-80 h-80 rounded-full opacity-10" style={{ background: "#60A5FA", filter: "blur(60px)", transform: "translate(-30%, 30%)" }} />
       </div>
 
       <div className="relative w-full max-w-md">
-        {/* Logo area */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-xl" style={{ background: "linear-gradient(135deg, #D4AF37, #B8960C)" }}>
             <Lock size={28} className="text-white" />
@@ -55,7 +55,6 @@ export function AdminLogin({ onLogin }: { onLogin: () => void }) {
           <p className="text-blue-200 text-sm">Crystal Digital Art & Award House</p>
         </div>
 
-        {/* Card */}
         <div className="bg-white rounded-3xl shadow-2xl p-8">
           <h2 className="text-lg font-bold text-gray-800 mb-1" style={{ fontFamily: "Poppins, sans-serif" }}>Sign In</h2>
           <p className="text-gray-500 text-sm mb-6">Enter your credentials to access the dashboard.</p>

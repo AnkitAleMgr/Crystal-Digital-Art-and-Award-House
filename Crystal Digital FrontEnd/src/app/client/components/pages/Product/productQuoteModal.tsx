@@ -6,7 +6,8 @@ import { PublicApiError, publicApi } from "../../../utils/api";
 import { catLabel } from "../../../utils/categories";
 import { useSiteData } from "../../layout/siteDataProvider";
 
-// ── QUOTE MODAL ───────────────────────────────────────────────────────────────
+// Overlay asking for a quote on one product: standard details, the product's
+// customization fields, optional artwork upload, and a POST to /api/quotes.
 export function QuoteModal({
   product,
   initialSize,
@@ -598,7 +599,9 @@ export function QuoteModal({
                 );
               })}
 
-              {/* Submit */}
+              {/* Honeypot: hidden from humans, bots fill it in. The server
+                  swallows any request carrying a value and answers 201
+                  without storing anything. */}
               <div
                 aria-hidden="true"
                 style={{

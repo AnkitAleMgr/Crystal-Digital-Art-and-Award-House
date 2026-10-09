@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+// Animates a number from 0 to `target` over `duration` once `active` is true.
 export function useCounter(
   target: number,
   active: boolean,

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
-// ── SECTION WRAPPER ──────────────────────────────────────────────────────────
+// Shared section scaffolding for every public page: consistent vertical
+// padding, max-width container and optional background colour.
 export function Section({
   children,
   className = "",
@@ -25,6 +26,7 @@ export function Section({
   );
 }
 
+// Gold dash-rule label above a section heading ("What We Do", etc).
 export function SectionLabel({
   children,
 }: {
@@ -53,6 +55,7 @@ export function SectionLabel({
   );
 }
 
+// Section title; `light` sets white text for use on blue/dark sections.
 export function SectionHeading({
   children,
   light = false,

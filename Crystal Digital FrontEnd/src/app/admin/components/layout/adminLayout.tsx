@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { ExternalLink, LogOut, Menu, MessageSquare } from "lucide-react";
 import { AdminSection, NAV_ITEMS } from "../../constants/admin";
 import { useAdmin } from "./adminProvider";
 import { Sidebar } from "./sidebar";
 
+// Admin shell: sidebar, top bar (new-quotes shortcut + "View Site" link) and
+// the routed page. Derives the active section from the URL.
+// (The noindex for /admin lives in AdminApp, which also serves the login screen.)
 export function AdminLayout() {
   const { onLogout, quoteCount } = useAdmin();
   const location = useLocation();

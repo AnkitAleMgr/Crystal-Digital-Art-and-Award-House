@@ -8,6 +8,7 @@ import {
 
 export const TestimonialRoute = express.Router();
 
+// Plain CRUD through the generic factory.
 TestimonialRoute.get("/", getTestimonials);
 TestimonialRoute.post("/", createTestimonial);
 TestimonialRoute.put("/:id", updateTestimonial);

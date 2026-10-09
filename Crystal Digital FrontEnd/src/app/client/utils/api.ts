@@ -5,9 +5,13 @@ import type {
   SubscriberSubmission,
 } from "../types/Public";
 
+// "Where is the API?" — the public site's only HTTP access point. VITE_API_BASE
+// is baked in at build time; the dev default is the local backend.
 export const PUBLIC_API_BASE =
   import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
 
+// Error for public API failures; carries the HTTP status (0 = unreachable) and
+// the server's field-level validation map, shown next to the form fields.
 export class PublicApiError extends Error {
   status: number;
   fields: Record<string, string>;
@@ -83,6 +87,8 @@ const post = <T>(path: string, body: unknown) =>
 const postForm = <T>(path: string, form: FormData) =>
   request<T>(path, { method: "POST", body: form });
 
+// The public read/write surface behind GET /api/* and POST /api/quotes,
+// /api/subscribers(+confirm/unsubscribe). Components never fetch() directly.
 export const publicApi = {
   products: <T>() => get<T>("/products"),
   categories: <T>() => get<T>("/categories"),

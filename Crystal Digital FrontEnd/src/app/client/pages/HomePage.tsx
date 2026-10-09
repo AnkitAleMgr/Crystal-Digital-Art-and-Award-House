@@ -1,6 +1,8 @@
-// ── HOME PAGE ─────────────────────────────────────────────────────────────────
-
+// Assembles the home page sections: hero, services, featured products, why-us
+// and testimonials, plus the closing CTA.
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { applyPageMeta } from "../../client/utils/seo";
 import { FeaturedProducts } from "../../client/components/pages/home/homeFeatureProducts";
 import { WhyChooseUs } from "../../client/components/pages/home/homeWhyChooseUs";
 import { Testimonials } from "../../client/components/pages/home/homeTestimonials";
@@ -10,6 +12,16 @@ import { Section, SectionHeading, SectionLabel } from "../components/pages/home/
 
 export function HomePage() {
   const navigate = useNavigate();
+
+  // The static index.html tags are only for the first paint, so the home page
+  // writes the real commercial title/description on mount.
+  useEffect(() => {
+    applyPageMeta({
+      title: "Crystal Digital Art & Award House | Crystal Awards & Trophies Nepal",
+      description:
+        "Custom crystal awards, trophies, plaques, medals and engraved gifts in Nepal — free design support, quality engraving and bulk orders for schools, corporates and events.",
+    });
+  }, []);
 
   const goToGallery = () => {
     navigate("/gallery");
@@ -82,7 +94,6 @@ export function HomePage() {
         <WhyChooseUs />
       </Section>
 
-      {/* FIXED: removed the extra } */}
       <Section bg="linear-gradient(135deg, #1E3A8A, #2563EB)">
         <div className="text-center mb-8">
           <SectionLabel>Customer Stories</SectionLabel>

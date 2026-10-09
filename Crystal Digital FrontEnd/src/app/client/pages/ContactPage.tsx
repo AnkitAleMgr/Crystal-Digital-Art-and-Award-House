@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { Section, SectionHeading, SectionLabel } from "../components/pages/home/homeSection";
 import img8 from "../../../imports/image-8.png";
 import { PublicApiError, publicApi } from "../utils/api";
 import { useSiteData } from "../components/layout/siteDataProvider";
 import { whatsappLink } from "../data/siteDefaults";
+import { applyPageMeta } from "../utils/seo";
 
 import { CheckCircle, ChevronDown, Clock, Facebook, Instagram, Mail, MapPin, MessageCircle, Phone, Send } from "lucide-react";
 
@@ -17,7 +18,17 @@ const EMPTY_FORM = {
   website: "",
 };
 
+// Contact page: settings-driven info cards, WhatsApp/social buttons, a message
+// form that POSTs to /api/quotes, and the embedded map.
 export function ContactPage() {
+  // SEO: per-route title/description replace the index.html defaults on mount.
+  useEffect(() => {
+    applyPageMeta({
+      title: "Contact & Request a Quote | Crystal Digital Art & Award House",
+      description:
+        "Tell us what you need — awards, trophies, plaques or engraved gifts — and our team will help with design, pricing, engraving and delivery across Nepal.",
+    });
+  }, []);
   const { settings } = useSiteData();
   const [form, setForm] = useState(EMPTY_FORM);
   const [sent, setSent] = useState(false);
@@ -405,6 +416,9 @@ export function ContactPage() {
                   }}
                 />
               </div>
+              {/* Honeypot: hidden from humans, bots fill it in. The server
+                  swallows any request carrying a value and answers 201
+                  without storing anything. */}
               <div
                 aria-hidden="true"
                 style={{

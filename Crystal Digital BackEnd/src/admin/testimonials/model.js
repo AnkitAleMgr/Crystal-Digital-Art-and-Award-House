@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+// Home-page testimonials as the site renders them.
 const TestimonialSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },

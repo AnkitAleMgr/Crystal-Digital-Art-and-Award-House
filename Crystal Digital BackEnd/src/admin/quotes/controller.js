@@ -2,6 +2,9 @@ import { createOne, deleteOne, fail, getAll, isObjectId, mapDoc } from "../../ut
 import { QuoteModel } from "./model.js";
 import { notifyCustomerOfStatus } from "../../utils/notifications.js";
 
+// Admin list (newest first) and the dashboard's own create. The public path is
+// POST /api/quotes, which is the one that validates against the product's
+// customization fields.
 export const getQuotes = getAll(QuoteModel);
 export const createQuote = createOne(QuoteModel);
 

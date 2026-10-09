@@ -14,7 +14,8 @@ import { PublicApiError, publicApi } from "../../utils/api";
 // could work out what was happening.
 type SubState = "idle" | "sending" | "sent" | "already" | "invalid" | "network";
 
-// ── FOOTER ────────────────────────────────────────────────────────────────────
+// Footer: contact details from settings, quick links, and the newsletter
+// subscribe form (posts to /api/subscribers).
 export function Footer() {
   const { settings } = useSiteData();
   const [email, setEmail] = useState("");

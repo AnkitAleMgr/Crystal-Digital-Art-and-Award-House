@@ -5,16 +5,33 @@ import { catLabel } from "../utils/categories";
 import { useInView } from "../../client/hooks/useInView";
 import { QuoteModal } from "../../client/components/pages/Product/productQuoteModal";
 import { useState } from "react";
+import { useEffect } from "react";
 import { ArrowLeft, CheckCircle, ChevronRight, Clock, MapPin, Phone, Send, Settings } from "lucide-react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
+import { applyPageMeta } from "../utils/seo";
 
-// ── PRODUCT DETAIL PAGE ───────────────────────────────────────────────────────
+// Single-product page: /products/:productId (the product's slug). Shows the
+// gallery image, specs and customization fields, and opens the QuoteModal.
 export function ProductDetailPage() {
   const navigate = useNavigate();
   const { productId } = useParams<{ productId: string }>();
 
   const { products, loading } = useSiteData();
   const product = products.find((item) => item.id === productId);
+
+  // SEO: each product gets its own title/description once the row loads, so a
+  // product page is a distinct, findable URL rather than a titled "not found".
+  useEffect(() => {
+    if (product) {
+      applyPageMeta({
+        title: `${product.name} | Crystal Digital Art & Award House`,
+        description:
+          product.desc ||
+          `${product.name} — custom-made by Crystal Digital Art & Award House in Nepal.`,
+        type: "product",
+      });
+    }
+  }, [product?.id, product?.name, product?.desc]);
 
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [selectedSize, setSelectedSize] = useState("");

@@ -2,8 +2,7 @@ import { Star } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSiteData } from "../../layout/siteDataProvider";
 
-// ── TESTIMONIALS ──────────────────────────────────────────────────────────────
-
+// Auto-rotating customer testimonial card, fed from the DB.
 export function Testimonials() {
   const { testimonials, loading } = useSiteData();
   const [tidx, setTidx] = useState(0);

@@ -44,7 +44,9 @@ export default function App() {
         <Route path="/unsubscribe" element={<UnsubscribePage />} />
       </Route>
 
-      {/* Admin */}
+      {/* Admin — AdminProvider owns auth and all dashboard data; AdminApp gates
+          on login, AdminLayout supplies the shell. Auth guard note: every admin
+          route here needs a matching NAV_ITEMS entry AND this route map. */}
       <Route path="/admin" element={<AdminProvider><AdminApp /></AdminProvider>}>
         <Route element={<AdminLayout />}>
           <Route index element={<AdminOverview />} />

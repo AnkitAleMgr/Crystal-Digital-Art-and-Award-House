@@ -1,3 +1,6 @@
+// `npm run seed:dump` — regenerates src/seed/data.mjs from the live database,
+// the reverse of migrate.mjs. The only write in the run is that one file.
+
 import "dotenv/config";
 import { writeFileSync } from "fs";
 import { fileURLToPath } from "url";

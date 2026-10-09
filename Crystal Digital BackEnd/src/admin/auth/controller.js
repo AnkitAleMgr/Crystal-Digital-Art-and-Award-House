@@ -1,6 +1,8 @@
 import crypto from "crypto";
 import { AdminModel } from "./model.js";
 
+// Whitelist, not a spread of the Mongoose document: the response must never
+// carry the password hash (or anything else the schema happens to hold).
 const safeUser = (admin) => ({
   id: admin._id,
   name: admin.name,
@@ -8,6 +10,10 @@ const safeUser = (admin) => ({
   role: admin.role,
 });
 
+// POST /admin/register — the only way to mint the first admin on a fresh
+// database. The `secret` body field must match ADMIN_REGISTER_SECRET, compared
+// with crypto.timingSafeEqual (length-checked first); with no secret configured
+// the route answers 503 and refuses rather than opening registration up.
 export const adminRegister = async (req, res) => {
   try {
     const { name, email, password, secret } = req.body;
@@ -100,6 +106,9 @@ export const adminRegister = async (req, res) => {
 
 
 
+// POST /admin/admin-login — returns the JWT plus the same whitelisted user
+// shape. The hash is opted back in with .select("+password") because the schema
+// keeps it out of normal queries; the catch must answer 500, never hang.
 export const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -147,6 +156,8 @@ export const adminLogin = async (req, res) => {
   }
 };
 
+// GET /admin/me — req.admin was set by authMiddleware, so this just proves the
+// token is alive and returns who it belongs to.
 export const getMe = (req, res) => {
   res.status(200).json({ status: true, data: req.admin });
 };

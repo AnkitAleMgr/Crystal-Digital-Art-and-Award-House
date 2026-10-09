@@ -1,3 +1,9 @@
+// `npm run state` — read-only audit: row counts per collection, the category
+// consistency check, and a Cloudinary orphan/dangling sweep of crystal-digital/*.
+// Writes nothing; the fastest way to confirm an upload/delete cycle left no
+// leftovers. (It also reads quotes' attachmentPublicId, so live customer
+// artwork is never reported as an orphan.)
+
 import "dotenv/config";
 import mongoose from "mongoose";
 import { v2 as cloudinary } from "cloudinary";

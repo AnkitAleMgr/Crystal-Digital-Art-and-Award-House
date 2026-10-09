@@ -1,5 +1,7 @@
 import { AdminModel } from "../auth/model.js";
 
+// Same whitelist as auth/controller.js's safeUser — the raw document would
+// carry the hash.
 const toSafe = (admin) => ({
   id: admin._id,
   name: admin.name,
@@ -7,6 +9,7 @@ const toSafe = (admin) => ({
   role: admin.role,
 });
 
+// GET /admin/users — newest first, password hashes never leave the server.
 export const listAdmins = async (req, res) => {
   try {
     const admins = await AdminModel.find().sort({ createdAt: -1 }).lean();
@@ -19,6 +22,9 @@ export const listAdmins = async (req, res) => {
   }
 };
 
+// POST /admin/users — creates an admin or staff account for an already-signed-in
+// admin (role is validated against the schema enum here so a bad value is a 400,
+// not a Mongoose error). Duplicate email answers 409.
 export const createAdmin = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -40,6 +46,9 @@ export const createAdmin = async (req, res) => {
   }
 };
 
+// DELETE /admin/users/:id — refuses to remove the caller's own account (the
+// target id is compared against req.admin.id), so no session can delete the
+// user it is running as.
 export const deleteAdmin = async (req, res) => {
   try {
     const { id } = req.params;

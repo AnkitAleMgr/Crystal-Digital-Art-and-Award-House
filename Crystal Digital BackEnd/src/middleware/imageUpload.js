@@ -50,8 +50,11 @@ const anyFile = multer({
   limits: { fileSize: MAX_IMAGE_BYTES, files: 1 },
 });
 
+// Admin image field: mimetype-filtered and size-capped, errors answered as 4xx
+// by uploadErrorHandler.
 export const singleImage = (field) => upload.single(field);
 
+// Public quote field: same cap, no type filter — see anyFile above.
 export const singleAnyFile = (field) => anyFile.single(field);
 
 // Error handler for the public quote route, where an unusable attachment must

@@ -19,7 +19,7 @@ function Detail({ label, value }: { label: string; value: string }) {
   );
 }
 
-// ── Quote Requests Panel ──────────────────────────────────────────────────────
+// Quote requests: status filter, search, status updates, CSV export and delete.
 export function AdminQuotes() {
   const { quotes, updateQuoteStatus, deleteQuote, refreshQuotes, quoteCount, error, clearError } = useAdmin();
   const [viewing, setViewing] = useState<QuoteRequest | null>(null);

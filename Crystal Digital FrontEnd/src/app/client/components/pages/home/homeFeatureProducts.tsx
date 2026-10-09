@@ -12,9 +12,10 @@ import { useState } from "react";
 import { ImageWithFallback } from "../../../../components/figma/ImageWithFallback";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-// ── FEATURED PRODUCTS ─────────────────────────────────────────────────────────
 const PAGE_SIZE = 6;
 
+// Home section showing products from the DB: filter pills, a paged grid and a
+// slider control; each card links to its /products/:slug page.
 export function FeaturedProducts() {
   const navigate = useNavigate();
   const { ref, visible } = useInView();

@@ -4,6 +4,9 @@ import { API_BASE, getToken } from "../../utils/api";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
+// Click-to-upload image field. The browser only ever talks to POST
+// /admin/upload (multipart); the returned Cloudinary URL + publicId are passed
+// up so the DB stores the URL and deletions can destroy the asset.
 export function ImageUploadField({
   label,
   value,

@@ -54,6 +54,7 @@ function TestimonialModal({
   );
 }
 
+// Testimonials: add/edit modal and delete, backed by the admin API.
 export function AdminTestimonials() {
   const { testimonials, createTestimonial, updateTestimonial, deleteTestimonial, error, clearError } = useAdmin();
   const [showModal, setShowModal] = useState(false);

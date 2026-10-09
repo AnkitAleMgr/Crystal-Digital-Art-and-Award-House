@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ImageWithFallback } from "../../../../components/figma/ImageWithFallback";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-// ── HERO CAROUSEL ────────────────────────────────────────────────────────────
+// Hero banner slides and the auto-advancing carousel that cycles through them.
 export const heroSlides = [
   {
     img: img2,

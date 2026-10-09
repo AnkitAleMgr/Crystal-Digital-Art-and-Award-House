@@ -1,4 +1,5 @@
 import { Clock, Mail, MapPin, Phone } from "lucide-react";
+import { useEffect } from "react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { useInView } from "../../client/hooks/useInView";
 import { StatCounter } from "../../client/components/pages/aboutUs/aboutUsStatCounter";
@@ -7,9 +8,19 @@ import img6 from "../../../imports/image-6.png";
 import img7 from "../../../imports/image-7.png";
 import img8 from "../../../imports/image-8.png";
 import { useSiteData } from "../components/layout/siteDataProvider";
+import { applyPageMeta } from "../utils/seo";
 
 
+// About page: hero banner, story sections, StatCounter band and location block.
 export function AboutPage() {
+  // SEO: per-route title/description replace the index.html defaults on mount.
+  useEffect(() => {
+    applyPageMeta({
+      title: "About Us | Crystal Digital Art & Award House",
+      description:
+        "Who we are: a Nepali team designing and hand-finishing crystal awards, trophies, plaques and engraved gifts with modern equipment and a focus on quality.",
+    });
+  }, []);
   const { settings } = useSiteData();
   const { ref: r1, visible: v1 } = useInView();
   return (

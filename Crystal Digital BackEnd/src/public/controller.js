@@ -15,6 +15,10 @@ import { verifySubscriberToken } from "../utils/subscribeTokens.js";
 import { uploadImage } from "../claudinery/claudineryService.js";
 import { ALLOWED_IMAGE_MIME_TYPES } from "../middleware/imageUpload.js";
 
+// The public read shape of a product. `id` is the SLUG, not the Mongo id: the
+// site's /products/:slug URLs and gallery.linkedProductId are both slug-based,
+// and imgPublicId is deliberately absent — it is the key that destroys the
+// Cloudinary asset and has no business being public.
 const publicProduct = (doc) => ({
   id: doc.slug,
   slug: doc.slug,
@@ -30,6 +34,8 @@ const publicProduct = (doc) => ({
   sizes: doc.sizes,
 });
 
+// Gallery items are addressed by their own id (only products use slugs), and
+// carry the same public fields the lightbox grid renders.
 const publicGallery = (doc) => ({
   id: String(doc._id),
   label: doc.label,
@@ -38,6 +44,7 @@ const publicGallery = (doc) => ({
   linkedProductId: doc.linkedProductId,
 });
 
+// Testimonials as the home page renders them; no admin-only fields exist here.
 const publicTestimonial = (doc) => ({
   id: String(doc._id),
   name: doc.name,
@@ -46,6 +53,7 @@ const publicTestimonial = (doc) => ({
   rating: doc.rating,
 });
 
+// GET /api/categories — the filter pills on the home and gallery pages.
 export const getPublicCategories = async (_req, res) => {
   try {
     // Same order the admin arranged them in — this list *is* the filter pills on
@@ -60,6 +68,7 @@ export const getPublicCategories = async (_req, res) => {
   }
 };
 
+// GET /api/products — what the site is allowed to show.
 export const getPublicProducts = async (req, res) => {
   try {
     // Only products carrying a slug are published to the site — a slug is what
@@ -74,6 +83,7 @@ export const getPublicProducts = async (req, res) => {
   }
 };
 
+// GET /api/gallery — every item, oldest first so the grid order stays stable.
 export const getPublicGallery = async (req, res) => {
   try {
     const docs = await GalleryModel.find().sort({ createdAt: 1 });
@@ -83,6 +93,7 @@ export const getPublicGallery = async (req, res) => {
   }
 };
 
+// GET /api/testimonials — home-page quotes, oldest first.
 export const getPublicTestimonials = async (req, res) => {
   try {
     const docs = await TestimonialModel.find().sort({ createdAt: 1 });
@@ -92,6 +103,8 @@ export const getPublicTestimonials = async (req, res) => {
   }
 };
 
+// GET /api/settings — the business details the site's footer/contact/about copy
+// is built from. `null` only on a database the seeder has never touched.
 export const getPublicSettings = async (req, res) => {
   try {
     const doc = await SettingModel.findOne();
@@ -106,6 +119,8 @@ export const getPublicSettings = async (req, res) => {
   }
 };
 
+// Trim and hard-cap every public string at `max`, so a crafted body cannot
+// write an absurd value past the schema's maxlength.
 const field = (value, max) => String(value ?? "").trim().slice(0, max);
 
 // Reads the customer's answers to the product's customizationFields and checks
@@ -204,6 +219,10 @@ const attachArtwork = async (doc, file) => {
   }
 };
 
+// POST /api/quotes — the public quote/contact submission. Validation is
+// hand-rolled so the messages are human-readable, the document is built field
+// by field (server-owned status), and both the artwork upload and the owner
+// alert run after the row exists so neither can cost the enquiry.
 export const createPublicQuote = async (req, res) => {
   // Honeypot: the field is hidden from humans, so anything in it is a bot.
   // Answer 201 anyway — replying with an error tells the bot it was caught.
@@ -324,11 +343,10 @@ export const createPublicQuote = async (req, res) => {
 
 // ── Newsletter ────────────────────────────────────────────────────────────────
 
-// The email itself is never echoed back, and neither is the stored document. The
-// one thing the response does reveal is whether the address was already
+// The email itself is never echoed back, and neither is the stored document.
+// The one thing the response does reveal is whether the address was already
 // confirmed, because otherwise somebody who is already subscribed gets told to
-// "check your inbox" for a mail that will never arrive. That is the same thing
-// the old localStorage form told them, so it is not a new disclosure.
+// "check your inbox" for a mail that will never arrive.
 export const createPublicSubscriber = async (req, res) => {
   // Honeypot, exactly as on the quote form: hidden from humans, so anything in
   // it is a bot. Answer 201 without storing anything.
@@ -405,6 +423,8 @@ export const createPublicSubscriber = async (req, res) => {
   }
 };
 
+// One reply for every bad/expired/wrong-purpose token. It never distinguishes
+// between them, so a probed URL learns nothing about what was wrong with it.
 const badToken = (res) =>
   res.status(400).json({
     status: false,

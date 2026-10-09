@@ -1,0 +1,10 @@
+# Crawlers: index the public site, never the admin dashboard.
+User-agent: *
+Allow: /
+Disallow: /admin
+
+# Email-link landing pages carry a query token and have no SEO value.
+Disallow: /subscribe/confirm
+Disallow: /unsubscribe
+
+Sitemap: https://crystaldigital.com.np/sitemap.xml

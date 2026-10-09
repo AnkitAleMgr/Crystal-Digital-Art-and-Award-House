@@ -2,6 +2,9 @@ import mongoose from "mongoose";
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 
+// Admin/staff accounts. Two invariants are load-bearing: the hash is never
+// selected by default (`select: false` + the toJSON transform), and every
+// password comparison has to opt it back in with `.select("+password")`.
 const AdminSchema = new mongoose.Schema(
   {
     name: {
@@ -22,7 +25,6 @@ const AdminSchema = new mongoose.Schema(
       type: String,
       required: true,
       enum: ["admin", "staff"],
-      enum: ["admin", "staff"],
       default: "admin",
     },
 
@@ -38,7 +40,8 @@ const AdminSchema = new mongoose.Schema(
 );
 
 
-// Never expose the password hash, no matter who serializes the document
+// Belt and braces on top of `select: false`: even a document that was explicitly
+// selected (or serialized by some other code path) never hands out the hash.
 AdminSchema.set("toJSON", {
   virtuals: true,
   transform: (_doc, ret) => {
@@ -49,7 +52,8 @@ AdminSchema.set("toJSON", {
 });
 
 
-// Password hashing
+// Hashes only when the password actually changed, so an unrelated edit (a name,
+// a role) cannot run the stored hash through bcrypt a second time.
 AdminSchema.pre("save", async function () {
   if (!this.isModified("password")) {
     return;
@@ -61,7 +65,8 @@ AdminSchema.pre("save", async function () {
 });
 
 
-// Compare password
+// Throws when the hash was not loaded rather than silently answering false —
+// callers must query with .select("+password").
 AdminSchema.methods.comparePassword = async function (password) {
   if (!this.password) {
     throw new Error(
@@ -73,7 +78,9 @@ AdminSchema.methods.comparePassword = async function (password) {
 };
 
 
-// Generate JWT
+// Payload is { id, email, role }: authMiddleware looks decoded.id up in the
+// admins collection, which is why a subscriber link token (email + purpose)
+// fails every protected route even when signed with the same secret.
 AdminSchema.methods.generateToken = function () {
   return jwt.sign(
     {

@@ -1,3 +1,6 @@
+// MongoDB connection. MONGO_DB_URI is read at import time and a missing value
+// throws immediately (before anything can serve), and DB_CONNECT exits the
+// process on a failed connect — the app must never run without a database.
 dotenv.config();
 
 
@@ -33,7 +36,8 @@ export const DB_CONNECT = async () => {
 };
 
 
-// MongoDB connection events
+// Connection lifecycle logging: mongoose reconnects on its own, so these are
+// informational — the process only ever exits via DB_CONNECT's failure path.
 mongoose.connection.on("disconnected", () => {
   console.warn("MongoDB disconnected");
 });

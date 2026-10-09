@@ -1,4 +1,5 @@
-// ── Global CSS ───────────────────────────────────────────────────────────────
+// Global CSS injected once at the layout root: base element styles plus the
+// fluid typography classes shared across home, about and product pages.
 export const globalStyles = `
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -11,10 +12,6 @@ export const globalStyles = `
   ::-webkit-scrollbar-thumb { background: #2563EB; border-radius: 3px; }
   .fade-in { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
   .fade-in.visible { opacity: 1; transform: none; }
-  .slide-left { opacity: 0; transform: translateX(-30px); transition: opacity 0.7s ease, transform 0.7s ease; }
-  .slide-left.visible { opacity: 1; transform: none; }
-  .slide-right { opacity: 0; transform: translateX(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
-  .slide-right.visible { opacity: 1; transform: none; }
   @keyframes testimonialSlide {
     from { opacity: 0; transform: translateX(24px) scale(0.98); }
     to   { opacity: 1; transform: translateX(0) scale(1); }

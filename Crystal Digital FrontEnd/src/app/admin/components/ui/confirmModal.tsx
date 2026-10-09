@@ -1,5 +1,8 @@
 import { AlertTriangle } from "lucide-react";
 
+// Small destructive-action confirm (fixed overlay). Some flows deliberately
+// avoid it — an inline confirm is used anywhere this would stack inside an
+// existing overlay.
 export function ConfirmModal({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

@@ -4,12 +4,9 @@ import { isMailConfigured, ownerEmail, sendMail } from "./mailer.js";
 import { siteLink } from "./siteUrl.js";
 import { signSubscriberToken } from "./subscribeTokens.js";
 
-// Every email this business sends. They used to be built in the React app and
-// POSTed to formsubmit.co, which meant the customer email addresses were shipped
-// to a third party and never actually delivered (FormSubmit answers 200 with
-// "This form needs Activation" until each recipient clicks a link — asking an
-// enquirer to click an "Activate Form" link from a business reads as phishing,
-// so the feature was effectively dead).
+// Every email this business sends — built here, transported by utils/mailer.js,
+// sent from the server only (a browser-side sender would ship the API key and
+// make the recipient caller-controlled).
 //
 // Everything is escaped: these bodies carry customer-supplied name/message text
 // and are rendered as HTML by the mail client.
@@ -25,10 +22,10 @@ const esc = (value) =>
 
 // IANA reserved example domains (RFC 2606 / RFC 6761). They can never be a real
 // customer mailbox, and the e2e suite submits ~15 of them per run. Without this,
-// configuring a real RESEND_API_KEY would mail the owner a dozen times per test
-// run and Resend would try to deliver to addresses that can never receive mail.
-// This is checked against the *quote's* address, not the recipient, so it also
-// silences the owner alert. Real enquiries are unaffected.
+// configuring real SMTP credentials would mail the owner a dozen times per test
+// run and the mail server would try to deliver to addresses that can never
+// receive. This is checked against the *quote's* address, not the recipient, so
+// it also silences the owner alert. Real enquiries are unaffected.
 //
 // Exported because the newsletter broadcast filters on it per recipient: the
 // e2e suite confirms an @example.com subscriber to "active" and then creates a
@@ -128,7 +125,7 @@ export const notifyOwnerOfQuote = async (quote) => {
     row("Artwork file", esc(dash(quote.attachment, "No file attached"))),
   ];
 
-  // The raw Cloudinary URL, not deliveryUrl()'s f_auto,q_auto: this is the file
+  // The raw Cloudinary URL with no f_auto,q_auto transform: this is the file
   // the customer has to reproduce at print size, and optimising it here would
   // hide exactly the detail that matters.
   const artwork = quote.attachmentUrl
@@ -329,7 +326,7 @@ export const notifySubscribersOfProduct = async (product) => {
   const info = await business();
   const productUrl = siteLink(`/products/${encodeURIComponent(product.slug)}`);
 
-  // The raw upload URL, not deliveryUrl()'s f_auto,q_auto: email clients do not
+  // The raw upload URL with no f_auto,q_auto transform: email clients do not
   // send Accept: image/webp, and some still cannot render a WebP at all. The
   // admin previews make the same trade.
   const image = product.imgUrl
@@ -350,9 +347,10 @@ export const notifySubscribersOfProduct = async (product) => {
   let sent = 0;
   let skippedNoToken = 0;
 
-  // Sequential on purpose. Resend rate-limits by requests/second, and this runs
-  // after the admin's save has already been answered, so there is nothing to
-  // gain from racing. A list in the thousands wants emails.batch() instead.
+  // Sequential on purpose — an SMTP mail server is happiest with one send in
+  // flight per connection, and this runs after the admin's save has already
+  // been answered, so there is nothing to gain from racing. A list in the
+  // thousands wants a provider batch API instead.
   for (const row of targets) {
     const token = signSubscriberToken(row.email, "unsubscribe");
 

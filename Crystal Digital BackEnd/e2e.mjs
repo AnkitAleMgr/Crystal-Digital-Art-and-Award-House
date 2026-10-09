@@ -1,7 +1,10 @@
+// `npm run e2e` — live contract checks against a server already running on
+// :3000. It writes real rows (and one real Cloudinary upload) but sweeps its
+// own fixtures first, so it stays repeatable; assertions below are numbered.
+
 import "dotenv/config";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
-import assert from "assert";
 
 const API = "http://localhost:3000";
 
@@ -217,7 +220,7 @@ let plainId = null;
 // Every request below carries a synthetic X-Forwarded-For. The quote rate limiter
 // buckets on that header, so each run gets a clean bucket — otherwise repeated
 // runs inside the 1h window would start failing on 429 and the suite would stop
-// being repeatable. The limiter itself is exercised in check 16.
+// being repeatable. The limiter itself is exercised in check 14.
 const ip = `203.0.113.${Math.floor(Math.random() * 250) + 1}`;
 const asIp = (extra = {}) => ({ ...extra, headers: { "X-Forwarded-For": ip, ...extra.headers } });
 const quoteCount = async () => (await call("/admin/quotes", { token })).body.data.length;
@@ -396,7 +399,7 @@ let rulesSlug = null;
 
 // 13. A mail outage must never cost a customer their quote. The send is
 //     skipped for reserved example domains (see isTestAddress in
-//     notifications.js), so this stays a no-op whether or not RESEND_API_KEY is
+//     notifications.js), so this stays a no-op whether or not SMTP is
 //     configured — the row must still save and the API must still answer 201.
 {
   const saved = await call("/api/quotes", asIp({
@@ -532,14 +535,14 @@ let widgetId = null;
 
 // 23. The newsletter. Every address here is @example.com, which isTestAddress()
 //     in notifications.js filters out of every send — so this whole section runs
-//     with a real RESEND_API_KEY configured and still mails nobody. That is the
+//     with real SMTP credentials configured and still mails nobody. That is the
 //     point of the guard, and it is what makes the suite safe to run against a
 //     live key.
 //
 //     Each check gets its own synthetic X-Forwarded-For. The subscribe limiter
 //     allows 5/hour, and this section makes more than 5 subscribe calls, so they
 //     each need a clean bucket — the same reason the quote section pins an IP.
-//     The limiter itself is exercised deliberately in 23.9.
+//     The limiter itself is exercised deliberately in 23.13.
 const SUB = "e2e-newsletter@example.com";
 const subSecret = process.env.SUBSCRIBER_TOKEN_SECRET?.trim() || process.env.ACCESS_TOKEN_SECRET;
 const mintToken = (email, purpose) =>

@@ -2,7 +2,7 @@ import { CheckCircle, Cpu, Gift, Shield, Star, ThumbsUp, Users, Zap } from "luci
 import { useInView } from "../../../hooks/useInView";
 
 
-// ── WHY CHOOSE US ─────────────────────────────────────────────────────────────
+// "Why Choose Us" feature list and its grid section.
 export const whyUs = [
   {
     icon: Star,

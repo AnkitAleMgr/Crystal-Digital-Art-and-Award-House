@@ -16,6 +16,8 @@ const STATUS_STYLE: Record<Status, { label: string; color: string; bg: string }>
 
 const FILTERS: ("all" | Status)[] = ["all", "active", "pending", "unsubscribed"];
 
+// Subscribers: status-filtered list, CSV export and delete — no create/edit,
+// matching the GET + DELETE-only admin API.
 export function AdminSubscribers() {
   const { subscribers, activeSubscriberCount, deleteSubscriber, refreshSubscribers, error, clearError } = useAdmin();
   const [filter, setFilter] = useState<"all" | Status>("all");

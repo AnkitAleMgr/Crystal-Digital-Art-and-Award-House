@@ -5,6 +5,9 @@ import { Input } from "../components/ui/input";
 import { Select } from "../components/ui/select";
 import type { AdminRole } from "../types/adminUser";
 
+// Admins & Staff: create and delete accounts. Self-gates here as well as being
+// requireAdmin-protected server-side, so a staff member sees an explanation
+// instead of a table whose every write would 403.
 export function AdminManagement() {
   const { users, addUser, deleteUser, isAdminUser } = useAdmin();
   const [open, setOpen] = useState(false);

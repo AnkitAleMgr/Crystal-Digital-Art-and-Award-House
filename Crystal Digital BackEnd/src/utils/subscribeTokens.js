@@ -26,8 +26,6 @@ const secret = () =>
   process.env.ACCESS_TOKEN_SECRET?.trim() ||
   "";
 
-export const isSubscriberTokenConfigured = () => Boolean(secret());
-
 /** Returns null (never throws) when no secret is configured. */
 export const signSubscriberToken = (email, purpose) => {
   const key = secret();

@@ -83,6 +83,7 @@ function GalleryModal({
   );
 }
 
+// Gallery: add/edit modal (with optional product link) and delete.
 export function AdminGallery() {
   const { gallery, categories, createGalleryItem, updateGalleryItem, deleteGalleryItem, products, error, clearError } = useAdmin();
   const [showModal, setShowModal] = useState(false);

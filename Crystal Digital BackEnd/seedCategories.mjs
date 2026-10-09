@@ -17,7 +17,7 @@ import mongoose from "mongoose";
 import { CategoryModel } from "./src/admin/categories/model.js";
 import { ProductModel } from "./src/admin/products/model.js";
 import { GalleryModel } from "./src/admin/gallery/model.js";
-import { SEED_CATEGORIES, upsertCategories } from "./src/seed/categories.mjs";
+import { upsertCategories } from "./src/seed/categories.mjs";
 
 const FORCE = process.argv.includes("--force");
 

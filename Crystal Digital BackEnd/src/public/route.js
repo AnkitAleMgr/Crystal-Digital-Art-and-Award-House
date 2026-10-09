@@ -13,8 +13,18 @@ import {
 import { quoteRateLimit, subscribeRateLimit, artworkDailyBudget } from "../middleware/rateLimit.js";
 import { singleAnyFile, artworkUploadFallback } from "../middleware/imageUpload.js";
 
+// The /api router: unauthenticated reads plus the three public writes (quote,
+// subscribe, confirm/unsubscribe). Guards live on the writes only.
+
 export const PublicRoute = express.Router();
 
+// Unauthenticated reads — no guard beyond the router being public:
+//
+//   products      published rows only (slug != "")
+//   categories    in the admin's display order
+//   gallery
+//   testimonials
+//   settings      the business details the site copy is built from
 PublicRoute.get("/products", getPublicProducts);
 PublicRoute.get("/categories", getPublicCategories);
 PublicRoute.get("/gallery", getPublicGallery);

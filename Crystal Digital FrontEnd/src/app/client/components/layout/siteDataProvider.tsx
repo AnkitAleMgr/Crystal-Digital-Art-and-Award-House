@@ -27,6 +27,9 @@ type SiteContextValue = {
 
 const SiteContext = createContext<SiteContextValue | undefined>(undefined);
 
+// Fetches the public content (products, categories, gallery, testimonials,
+// settings) once and holds it above the routed pages. Sits above Layout, so
+// navigating between pages never refetches.
 export function SiteDataProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<PublicCategory[]>([]);
@@ -88,6 +91,7 @@ export function SiteDataProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Access hook; throws if used outside the provider.
 export function useSiteData() {
   const ctx = useContext(SiteContext);
   if (!ctx) throw new Error("useSiteData must be used within SiteDataProvider");

@@ -1,3 +1,4 @@
+// Styled select with an optional label, sharing the admin field styling.
 export function Select({ label, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { label?: string }) {
   return (
     <div className="flex flex-col gap-1.5">

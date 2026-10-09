@@ -1,12 +1,20 @@
 import { deleteImage } from "../claudinery/claudineryService.js";
 
+// Every response in this project is built through mapDoc: strip Mongo's `_id`
+// and `__v`, expose the document under `id`, so the TypeScript shapes on the
+// frontend never have to care about Mongo's naming.
 export const mapDoc = (doc) => {
   const { _id, __v, ...rest } = doc.toObject();
   return { id: _id, ...rest };
 };
 
+// Checked before any findById: a junk id would otherwise surface as a Mongoose
+// CastError, and 404 is both the honest answer and the one that leaks nothing.
 export const isObjectId = (value) => /^[a-f\d]{24}$/i.test(String(value));
 
+// The one error responder: a Mongoose ValidationError becomes a 400 carrying a
+// field → message map (`errors`) the admin modal renders next to each input,
+// anything else falls through to the given status with just the message.
 export const fail = (res, error, status = 500) => {
   if (error.name === "ValidationError") {
     const errors = Object.fromEntries(
@@ -54,6 +62,7 @@ const releaseReplacedImage = async (before, after, imageField) => {
   await releaseImage(before, imageField);
 };
 
+// GET handler: every row, newest first, under { status, data }.
 export const getAll = (Model) => async (req, res) => {
   try {
     const items = await Model.find().sort({ createdAt: -1 });
@@ -63,6 +72,10 @@ export const getAll = (Model) => async (req, res) => {
   }
 };
 
+// POST handler: creates from req.body and answers 201. The resources that need
+// a server-owned field hand-roll their own create instead — products (slug) and
+// the public quote path (status, timestamps) — but a ValidationError still
+// surfaces through fail() as a 400 with the field map either way.
 export const createOne = (Model) => async (req, res) => {
   try {
     const doc = await Model.create(req.body);
@@ -72,6 +85,11 @@ export const createOne = (Model) => async (req, res) => {
   }
 };
 
+// PUT handler: a PARTIAL update — findByIdAndUpdate only merges the keys the
+// caller sent, which is what lets an admin save { status } alone without
+// wiping the customer's details. `returnDocument: "after"` (not the deprecated
+// `new: true`) so the response carries the row as saved. `{ withImages }`
+// additionally destroys the previous Cloudinary asset when it was replaced.
 export const updateOne = (Model, options = {}) => async (req, res) => {
   if (!isObjectId(req.params.id)) {
     return res.status(404).json({ status: false, message: "Not found" });
@@ -101,6 +119,10 @@ export const updateOne = (Model, options = {}) => async (req, res) => {
   }
 };
 
+// DELETE handler: removes the row, and with `{ withImages }` the Cloudinary
+// asset it owns too (imageField names the column — products/gallery say
+// `imgPublicId`, quotes say `attachmentPublicId`). Answers { status, message }
+// with no `data` key.
 export const deleteOne = (Model, options = {}) => async (req, res) => {
   if (!isObjectId(req.params.id)) {
     return res.status(404).json({ status: false, message: "Not found" });

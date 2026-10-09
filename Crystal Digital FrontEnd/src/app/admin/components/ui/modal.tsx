@@ -1,5 +1,8 @@
 import { X } from "lucide-react";
 
+// Generic admin modal: fixed overlay, backdrop-click to close, sticky header
+// with the title and close button, scrollable body. No role="dialog" — the
+// title heading is the only semantic handle on it.
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

@@ -1,7 +1,7 @@
 import { ArrowUp } from "lucide-react";
 import { useEffect, useState } from "react";
 
-// ── BACK TO TOP ───────────────────────────────────────────────────────────────
+// Floating button that appears after scrolling down and returns to the top.
 export function BackToTop() {
   const [show, setShow] = useState(false);
   useEffect(() => {

@@ -3,6 +3,8 @@ import { Lock, LogOut, X } from "lucide-react";
 import { AdminSection, NAV_ITEMS } from "../../constants/admin";
 import { useAdmin } from "./adminProvider";
 
+// Fixed nav rail: section links from NAV_ITEMS, the pending-quotes badge and
+// sign-out. Collapses to an off-canvas drawer on mobile.
 export function Sidebar({
   onLogout,
   mobileOpen,

@@ -1,6 +1,10 @@
 import jwt from "jsonwebtoken";
 import { AdminModel } from "../admin/auth/model.js";
 
+// Verifies the `Authorization: Bearer <jwt>` header, loads the admin it was
+// issued to and puts a plain object on req.admin. Every failure answers 401 —
+// an expired or tampered token is indistinguishable from no token, and a
+// subscriber link token fails here too because its payload carries no `id`.
 export const authMiddleware = async (req, res, next) => {
   try {
     const header = req.headers.authorization;

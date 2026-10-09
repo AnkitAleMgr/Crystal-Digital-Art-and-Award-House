@@ -1,7 +1,13 @@
 import mongoose from "mongoose";
 
+// Deliberately the same shape as SUBSCRIBER_EMAIL_PATTERN: one pattern shared by
+// the schema's `match` and the hand-rolled public validation, so the message a
+// visitor sees is the rule the database enforces.
 export const QUOTE_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// `status` only ever moves through the admin PUT (which emails the customer on
+// a real transition). The public POST writes "new" itself and ignores anything
+// posted alongside it, so a crafted body cannot pre-close its own quote.
 const QuoteSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 120 },

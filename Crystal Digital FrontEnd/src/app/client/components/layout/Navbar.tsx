@@ -4,8 +4,8 @@ import { ImageWithFallback } from "../../../../app/components/figma/ImageWithFal
 import { Menu, X } from "lucide-react";
 import logo from "../../../../imports/image.png";
 
-// ── Navbar ───────────────────────────────────────────────────────────────────
-
+// Fixed header: brand, desktop links, "Get a Quote" (scrolls to the featured
+// products) and a collapsible mobile menu.
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -132,10 +132,8 @@ export function Navbar() {
             })}
           </nav>
 
-          {/* Right Side */}
+          {/* Right Side: desktop CTA + mobile menu toggle */}
           <div className="flex items-center gap-3">
-
-            {/* Get a Quote */}
             <button
               onClick={goToQuote}
               className="hidden lg:block px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:shadow-lg hover:scale-105 active:scale-95"
@@ -205,7 +203,6 @@ export function Navbar() {
             );
           })}
 
-          {/* Mobile Get a Quote */}
           <button
             onClick={goToQuote}
             className="mt-2 px-4 py-3 rounded-xl text-sm font-semibold text-white text-center"

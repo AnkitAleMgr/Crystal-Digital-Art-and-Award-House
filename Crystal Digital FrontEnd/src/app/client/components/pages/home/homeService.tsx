@@ -1,6 +1,6 @@
 import { useInView } from "../../../hooks/useInView";
 
-// ── SERVICES ─────────────────────────────────────────────────────────────────
+// "What We Do" grid of service cards and their static content.
 export const services = [
   {
     emoji: "🏆",

@@ -1,6 +1,7 @@
 import { useCounter } from "../../../hooks/useCounter";
 import { useInView } from "../../../hooks/useInView";
 
+// Animated number that counts 0 → target once the section scrolls into view.
 export function StatCounter({
   target,
   label,

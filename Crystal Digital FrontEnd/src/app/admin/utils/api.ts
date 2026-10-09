@@ -1,3 +1,5 @@
+// Where the admin API lives. VITE_API_BASE is baked in at build time and must
+// point at the deployed backend; the dev default is the local API.
 export const API_BASE =
   import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
 
@@ -5,11 +7,12 @@ export const TOKEN_KEY = "cdaah_token";
 
 import type { AdminUser, AdminUserCreate } from "../types/adminUser";
 
-
+// The session JWT, kept in sessionStorage so it clears when the tab closes.
 export function getToken(): string | null {
   return sessionStorage.getItem(TOKEN_KEY);
 }
 
+// Error the request layer throws: carries the HTTP status (0 = unreachable).
 export class ApiError extends Error {
   status: number;
 
@@ -23,6 +26,8 @@ type UnauthorizedHandler = () => void;
 
 let onUnauthorized: UnauthorizedHandler | null = null;
 
+// The provider registers the logout handler here so a 401 self-heals by
+// signing the admin out instead of hanging on a failed request.
 export function setUnauthorizedHandler(handler: UnauthorizedHandler | null) {
   onUnauthorized = handler;
 }
@@ -68,6 +73,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return payload.data as T;
 }
 
+// CRUD verbs for the /admin resources. Awaiting DELETE returns undefined by
+// design — the backend answers status without a data payload.
 export const api = {
   getAll: <T>(resource: string) => request<T[]>(`/${resource}`),
   create: <T>(resource: string, body: unknown) =>
@@ -84,6 +91,7 @@ export const api = {
     request<T>("/settings", { method: "PUT", body: JSON.stringify(body) }),
 };
 
+// Admin/staff account endpoints (GET list, POST create, DELETE :id).
 export const usersApi = {
   list: () => api.getAll<AdminUser>("users"),
   create: (data: AdminUserCreate) => api.create<AdminUser>("users", data),

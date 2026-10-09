@@ -4,9 +4,9 @@ import { Textarea } from "../components/ui/Textarea";
 import { AlertCircle, CheckCircle, Loader2, Save } from "lucide-react";
 import { useAdmin } from "../components/layout/adminProvider";
 
-// ── Settings Panel ────────────────────────────────────────────────────────────
+// Settings page: edits the single business-details document via PUT /admin/settings.
 export function AdminSettings() {
-  const { settings, saveSettings, error, clearError, loading } = useAdmin();
+  const { settings, saveSettings, error, loading } = useAdmin();
   const [form, setForm] = useState({ ...settings });
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);

@@ -1,41 +1,71 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-// Transactional email via Resend (https://resend.com). This is the ONLY place
-// the API key is read, and it runs server-side only — the browser must never see
-// it, which is one of the reasons sending was moved off the frontend entirely.
+// Transactional email via Nodemailer over SMTP. This is the ONLY place the SMTP
+// credentials are read, and it runs server-side only — the browser must never
+// see them, which is one of the reasons sending was moved off the frontend
+// entirely.
 //
 // Nothing in here throws. Every caller is fire-and-forget: a quote that is
 // already saved in MongoDB must not turn into a failed form submission because
-// the mail provider had a bad minute. Failures are logged, not surfaced.
+// the mail server had a bad minute. Failures are logged, not surfaced.
 
-let client;
+let transport;
 
-const getClient = () => {
-  const key = process.env.RESEND_API_KEY?.trim();
+const smtpConfig = () => ({
+  host: process.env.SMTP_HOST?.trim() || "",
+  port: Number(process.env.SMTP_PORT?.trim() || 587),
+  user: process.env.SMTP_USER?.trim() || "",
+  pass: process.env.SMTP_PASS?.trim() || "",
+});
 
-  if (!key) {
+// Transport is cached once the credentials are present. Port 465 speaks
+// implicit TLS; 587/25 use STARTTLS, which Nodemailer negotiates the upgrade on
+// by default.
+const getTransport = () => {
+  const { host, port, user, pass } = smtpConfig();
+
+  if (!host || !user || !pass) {
     return null;
   }
 
-  client ??= new Resend(key);
-  return client;
+  transport ??= nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  });
+  return transport;
 };
 
-export const isMailConfigured = () => Boolean(process.env.RESEND_API_KEY?.trim());
+// True when the SMTP credentials are set — callers use it to skip work (reading
+// a subscriber list, say) that could not possibly send anything.
+export const isMailConfigured = () => {
+  const { host, user, pass } = smtpConfig();
+  return Boolean(host && user && pass);
+};
 
-// Falls back to Resend's onboarding address, which is only allowed to send to
-// the account owner's own inbox. That is enough to prove the setup works, but a
-// real business should verify a domain and set MAIL_FROM to it.
+// MAIL_FROM is the real "from", which should be an address the SMTP server is
+// allowed to send as. It falls back to the SMTP user when that looks like an
+// email address, so a fresh setup still sends while the admin sorts the bounce
+// policy for the domain out. Empty when there is nothing usable.
 export const mailFrom = () =>
-  process.env.MAIL_FROM?.trim() || "Crystal Digital <onboarding@resend.dev>";
+  process.env.MAIL_FROM?.trim() ||
+  (smtpConfig().user.includes("@")
+    ? `Crystal Digital <${smtpConfig().user}>`
+    : "");
 
+// OWNER_EMAIL, or "" when unset — every caller checks for "" and logs rather
+// than handing an empty recipient to the mail server.
 export const ownerEmail = () => process.env.OWNER_EMAIL?.trim() || "";
 
+// Returns { sent: true, id } or { sent: false, reason } and never throws, so
+// every caller can fire-and-forget without a try/catch. `reason` is a short
+// token ("not_configured", "no_recipient") or the SMTP error's message.
 export const sendMail = async ({ to, subject, html, replyTo, headers }) => {
-  const resend = getClient();
+  const mailer = getTransport();
 
-  if (!resend) {
-    console.warn(`[mailer] RESEND_API_KEY is not set — "${subject}" was NOT sent`);
+  if (!mailer) {
+    console.warn(`[mailer] SMTP is not configured — "${subject}" was NOT sent`);
     return { sent: false, reason: "not_configured" };
   }
 
@@ -45,7 +75,7 @@ export const sendMail = async ({ to, subject, html, replyTo, headers }) => {
   }
 
   try {
-    const { data, error } = await resend.emails.send({
+    const info = await mailer.sendMail({
       from: mailFrom(),
       to,
       subject,
@@ -57,13 +87,8 @@ export const sendMail = async ({ to, subject, html, replyTo, headers }) => {
       ...(headers && Object.keys(headers).length > 0 ? { headers } : {}),
     });
 
-    if (error) {
-      console.error(`[mailer] "${subject}" to ${to} failed:`, error);
-      return { sent: false, reason: error.message };
-    }
-
-    console.log(`[mailer] sent "${subject}" to ${to} (${data?.id ?? "no id"})`);
-    return { sent: true, id: data?.id };
+    console.log(`[mailer] sent "${subject}" to ${to} (${info.messageId})`);
+    return { sent: true, id: info.messageId };
   } catch (error) {
     console.error(`[mailer] "${subject}" to ${to} threw:`, error);
     return { sent: false, reason: error.message };

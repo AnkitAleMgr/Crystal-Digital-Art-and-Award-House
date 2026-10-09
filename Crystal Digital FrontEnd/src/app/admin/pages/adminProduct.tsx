@@ -7,9 +7,9 @@ import { Input } from "../components/ui/input";
 import { Modal } from "../components/ui/modal";
 import { Textarea } from "../components/ui/Textarea";
 import { useAdmin } from "../components/layout/adminProvider";
-import { Asterisk, Pencil, Plus, Search, Tag, Trash2, X, AlertCircle, Loader2 } from "lucide-react";
+import { Pencil, Plus, Search, Tag, Trash2, X, AlertCircle, Loader2 } from "lucide-react";
 
-// ── Products Panel ────────────────────────────────────────────────────────────
+// Blank product used as the starting point for the "Add Product" modal.
 function emptyProduct(): Omit<AdminProduct, "id"> {
   return { slug: "", name: "", desc: "", fullDesc: "", cat: "", features: [], specs: [], customizationFields: [], tags: [], sizes: [], imgUrl: "", imgPublicId: "" };
 }
@@ -271,6 +271,7 @@ function ProductModal({
   );
 }
 
+// Products: searchable table with the create/edit ProductModal and delete.
 export function AdminProducts() {
   const { products, categories, createProduct, updateProduct, deleteProduct, error, clearError, loading } = useAdmin();
   const [search, setSearch] = useState("");
@@ -278,7 +279,6 @@ export function AdminProducts() {
   const [editing, setEditing] = useState<AdminProduct | null>(null);
   const [deleting, setDeleting] = useState<AdminProduct | null>(null);
   const [catFilter, setCatFilter] = useState("All");
-  const [saving, setSaving] = useState(false);
 
   // "Uncategorized" is a real state: deleting a category in the product modal
   // clears the cat of every product that used it, and those products have to
@@ -298,7 +298,6 @@ export function AdminProducts() {
   );
 
   async function handleSave(data: Omit<AdminProduct, "id">) {
-    setSaving(true);
     try {
       // A field whose name was added then cleared would fail the schema's
       // `required` on label, so it is dropped here rather than bounced back as
@@ -318,8 +317,6 @@ export function AdminProducts() {
       setShowModal(false);
       setEditing(null);
     } catch {
-    } finally {
-      setSaving(false);
     }
   }
 
