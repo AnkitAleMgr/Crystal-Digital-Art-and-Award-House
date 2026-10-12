@@ -96,8 +96,12 @@ const block = (text) => `
  * A new public quote/contact submission, to the business owner.
  * Reply-To is the customer, so hitting reply in the inbox answers them directly
  * without the owner having to copy the address across.
+ *
+ * `listPrice` is the product's catalogue price, supplied by the caller because
+ * the quote document does not store it (a later price edit must not rewrite
+ * history). "N/A" when the admin has not set one, matching the website.
  */
-export const notifyOwnerOfQuote = async (quote) => {
+export const notifyOwnerOfQuote = async (quote, listPrice = "") => {
   const to = ownerEmail();
 
   if (isTestAddress(quote?.email)) {
@@ -116,6 +120,7 @@ export const notifyOwnerOfQuote = async (quote) => {
     row("Email", esc(quote.email)),
     row("Phone", esc(dash(quote.phone, "Not provided"))),
     row("Product", esc(dash(quote.product, "—"))),
+    row("List price", esc(dash(listPrice, "N/A"))),
     row("Service", esc(dash(quote.service, "—"))),
     row("Size", esc(dash(quote.size, "—"))),
     row("Quantity", esc(dash(quote.quantity, "—"))),
@@ -389,6 +394,7 @@ export const notifySubscribersOfProduct = async (product) => {
     `${image}
      <p style="margin:18px 0 0;font-size:15px;line-height:1.6;">${esc(dash(product.desc, "We have just added a new product to our range."))}</p>
      ${product.cat ? `<p style="margin:10px 0 0;font-size:12px;color:#6B7280;">Category: ${esc(product.cat)}</p>` : ""}
+     <p style="margin:8px 0 0;font-size:14px;font-weight:600;color:#111827;">Price: ${esc(dash(product.price, "N/A"))}</p>
      ${button(productUrl, "View this product")}
      ${product.fullDesc ? block(product.fullDesc) : ""}
      ${unsubscribeNote(UNSUBSCRIBE_PLACEHOLDER)}`,

@@ -6,6 +6,7 @@ export interface SiteSettings {
   address: string;
   mapLink: string;
   facebookUrl: string;
-  workingHours: string;
+  instagramUrl: string;
   whatsapp: string;
+  workingHours: string;
 }

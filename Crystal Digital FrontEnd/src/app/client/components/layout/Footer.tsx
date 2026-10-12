@@ -91,8 +91,8 @@ export function Footer() {
                 {
                   icon: Instagram,
                   color: "#E1306C",
-                  href: null,
-                  label: "Instagram (coming soon)",
+                  href: settings.instagramUrl,
+                  label: "Instagram",
                 },
                 {
                   icon: MessageCircle,

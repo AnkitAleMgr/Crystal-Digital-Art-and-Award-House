@@ -8,6 +8,7 @@ import {
   inCategory,
 } from "../../../utils/categories";
 import { useInView } from "../../../hooks/useInView";
+import { priceLabel } from "../../../utils/price";
 import { useState } from "react";
 import { ImageWithFallback } from "../../../../components/figma/ImageWithFallback";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -147,6 +148,12 @@ export function FeaturedProducts() {
               </h3>
               <p className="card-desc text-sm text-gray-500 leading-relaxed">
                 {p.desc}
+              </p>
+              <p
+                className="mt-3 text-sm font-bold"
+                style={{ color: "#2563EB", fontFamily: "Poppins, sans-serif" }}
+              >
+                {priceLabel(p.price)}
               </p>
             </div>
           </div>

@@ -6,7 +6,10 @@ export interface Product {
   fullDesc: string;
   cat: string;
   features: string[];
-  specs: { label: string; value: string }[];
+  // Free text (e.g. "Rs. 2,500"). Empty means the site shows "N/A".
+  price: string;
+  // Whether the quote form offers the logo/image upload for this product.
+  allowImageUpload: boolean;
   // The public /products/:slug address. Sent back on the quote so the server
   // re-reads this product's rules instead of trusting the posted labels.
   slug: string;

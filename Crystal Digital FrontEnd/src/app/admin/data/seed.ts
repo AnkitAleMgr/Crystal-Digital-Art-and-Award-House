@@ -14,6 +14,7 @@ export const SEED_SETTINGS: SiteSettings = {
   address: "Darbarthok Marga 1, Samsung Galli, Pokhara 33700, Nepal",
   mapLink: "https://www.google.com/maps",
   facebookUrl: "https://www.facebook.com/crystaldigital12712/",
+  instagramUrl: "",
   workingHours: "Sun–Fri: 9:00 AM – 7:00 PM | Sat: 10:00 AM – 5:00 PM",
   whatsapp: "+977 9800000000",
 };

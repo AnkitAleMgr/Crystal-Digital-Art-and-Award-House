@@ -67,7 +67,8 @@ const product = {
   desc: "created by the e2e check",
   cat: "Crystal",
   features: ["feature a"],
-  specs: [{ label: "Material", value: "glass" }],
+  price: "Rs. 2,500",
+  allowImageUpload: true,
   customizationFields: [
     { label: "Recipient name", required: true, maxLength: 80 },
     { label: "Engraving note", required: false, maxLength: 120 },
@@ -158,6 +159,9 @@ let plainId = null;
   check("new product appears in GET /api/products", code === 200 && Boolean(found), `count=${body.data?.length}`);
   check("public response omits imgPublicId", found && !("imgPublicId" in found));
   check("public response carries sizes", found && Array.isArray(found.sizes) && found.sizes.length === 2);
+  check("public response carries the price", found?.price === "Rs. 2,500", `price=${found?.price}`);
+  check("public response carries the image-upload flag", found?.allowImageUpload === true, `allowImageUpload=${found?.allowImageUpload}`);
+  check("public response dropped the removed specs field", found && !("specs" in found));
   check("public response carries customizationFields with the required flag", found?.customizationFields?.[0]?.label === "Recipient name" && found?.customizationFields?.[0]?.required === true, JSON.stringify(found?.customizationFields));
   check("public response has no leftover customizable list", found && !("customizable" in found));
   check("customization fields carry no subdocument _id", found && !JSON.stringify(found.customizationFields).includes("_id"), JSON.stringify(found?.customizationFields));
@@ -783,6 +787,44 @@ let artworkId = null;
   const img = artworkUrl ? await fetch(artworkUrl) : null;
   check("the image is really served from Cloudinary", img?.status === 200, `code=${img?.status}`);
   check("Cloudinary served an actual image", (img?.headers.get("content-type") ?? "").startsWith("image/"), img?.headers.get("content-type") ?? "(none)");
+}
+
+// 25b. A product that has NOT enabled image uploads drops the attached file: the
+//      enquiry is still saved, but nothing reaches Cloudinary, so the endpoint
+//      cannot be used as free hosting behind a non-engraved product.
+{
+  const { body: created } = await call("/admin/products", {
+    method: "POST",
+    token,
+    body: JSON.stringify({
+      name: "E2E No Upload Widget",
+      desc: "image uploads disabled",
+      allowImageUpload: false,
+      customizationFields: [],
+      sizes: [],
+    }),
+  });
+
+  const { code, body } = await callForm(
+    "/api/quotes",
+    artworkForm(
+      {
+        name: "E2E No Upload",
+        email: "noupload@example.com",
+        product: "E2E No Upload Widget",
+        productSlug: created.data?.slug,
+      },
+      { bytes: PNG, type: "image/png", name: "should-be-dropped.png" }
+    ),
+    asIp()
+  );
+
+  const row = (await call("/admin/quotes", { token })).body.data.find((q) => q.id === body.data?.id);
+  check("a product without the upload flag still accepts the quote", code === 201 && Boolean(row), `code=${code}`);
+  check("the file is dropped when the product does not allow uploads", row && !row.attachment && !row.attachmentUrl, `attachment=${row?.attachment} url=${row?.attachmentUrl}`);
+
+  await call(`/admin/quotes/${row?.id}`, { method: "DELETE", token });
+  await call(`/admin/products/${created.data?.id}`, { method: "DELETE", token });
 }
 
 // 26. A honeypot submission must not become free image hosting.

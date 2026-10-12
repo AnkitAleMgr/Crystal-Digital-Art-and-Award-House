@@ -11,7 +11,7 @@ import { Pencil, Plus, Search, Tag, Trash2, X, AlertCircle, Loader2 } from "luci
 
 // Blank product used as the starting point for the "Add Product" modal.
 function emptyProduct(): Omit<AdminProduct, "id"> {
-  return { slug: "", name: "", desc: "", fullDesc: "", cat: "", features: [], specs: [], customizationFields: [], tags: [], sizes: [], imgUrl: "", imgPublicId: "" };
+  return { slug: "", name: "", desc: "", fullDesc: "", cat: "", features: [], price: "", allowImageUpload: false, customizationFields: [], tags: [], sizes: [], imgUrl: "", imgPublicId: "" };
 }
 
 function ProductModal({
@@ -28,8 +28,6 @@ function ProductModal({
   const [tagInput, setTagInput] = useState("");
   const [customInput, setCustomInput] = useState("");
   const [sizeInput, setSizeInput] = useState("");
-  const [specLabel, setSpecLabel] = useState("");
-  const [specVal, setSpecVal] = useState("");
 
   function addItem(field: "features", val: string, setter: (v: string) => void) {
     if (!val.trim()) return;
@@ -63,19 +61,17 @@ function ProductModal({
     setForm((f) => ({ ...f, tags: [...f.tags, tagInput.trim()] }));
     setTagInput("");
   }
-  function addSpec() {
-    if (!specLabel.trim() || !specVal.trim()) return;
-    setForm((f) => ({ ...f, specs: [...f.specs, { label: specLabel.trim(), value: specVal.trim() }] }));
-    setSpecLabel(""); setSpecVal("");
-  }
-
   return (
     <Modal title={initial ? "Edit Product" : "Add New Product"} onClose={onClose}>
       <div className="space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Product Name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Crystal Award" required />
           <CategorySelect label="Category" value={form.cat} onChange={(cat) => setForm({ ...form, cat })} />
+          <Input label="Price" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="e.g. Rs. 2,500" />
         </div>
+        <p className="-mt-3 text-xs text-gray-400">
+          Price is shown on the product page and product cards. Leave it empty to display "N/A".
+        </p>
         {initial && (
           <p className="-mt-3 text-xs text-gray-400">
             Public page: /products/{initial.slug}
@@ -101,23 +97,21 @@ function ProductModal({
           </div>
         </div>
 
-        {/* Specs */}
-        <div>
-          <label className="text-sm font-semibold text-gray-700 block mb-2">Specifications</label>
-          <div className="flex gap-2 mb-2">
-            <input value={specLabel} onChange={(e) => setSpecLabel(e.target.value)} placeholder="Label (e.g. Material)" className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
-            <input value={specVal} onChange={(e) => setSpecVal(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addSpec())} placeholder="Value" className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
-            <button onClick={addSpec} className="px-3 py-2 rounded-lg text-white text-sm" style={{ background: "#2563EB" }}><Plus size={16} /></button>
-          </div>
-          <div className="space-y-1.5">
-            {form.specs.map((s, i) => (
-              <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-gray-50 text-sm">
-                <span className="font-medium text-gray-700">{s.label}:</span>
-                <span className="text-gray-600">{s.value}</span>
-                <button onClick={() => setForm((f) => ({ ...f, specs: f.specs.filter((_, ii) => ii !== i) }))}><X size={14} className="text-gray-400 hover:text-red-500" /></button>
-              </div>
-            ))}
-          </div>
+        {/* Image upload — off by default; only engraved products need the customer's logo */}
+        <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 border border-blue-100">
+          <input
+            id="allow-image-upload"
+            type="checkbox"
+            checked={form.allowImageUpload}
+            onChange={(e) => setForm({ ...form, allowImageUpload: e.target.checked })}
+            className="mt-0.5 w-4 h-4 accent-blue-600 cursor-pointer"
+          />
+          <label htmlFor="allow-image-upload" className="cursor-pointer select-none">
+            <span className="text-sm font-semibold text-gray-700">Allow customer image upload</span>
+            <span className="block text-xs text-gray-500 mt-0.5">
+              Shows a logo/image upload field on this product's quote form. Leave off for products with no engraving or printing.
+            </span>
+          </label>
         </div>
 
         {/* Customization fields */}

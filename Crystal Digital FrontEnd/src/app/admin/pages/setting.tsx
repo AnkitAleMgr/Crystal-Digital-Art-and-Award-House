@@ -67,6 +67,7 @@ export function AdminSettings() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
         <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide" style={{ fontFamily: "Poppins, sans-serif" }}>Social & Map Links</h2>
         <Input label="Facebook Page URL" value={form.facebookUrl} onChange={(e) => setForm({ ...form, facebookUrl: e.target.value })} placeholder="https://facebook.com/..." />
+        <Input label="Instagram URL" value={form.instagramUrl} onChange={(e) => setForm({ ...form, instagramUrl: e.target.value })} placeholder="https://instagram.com/..." />
         <Input label="Google Maps Link" value={form.mapLink} onChange={(e) => setForm({ ...form, mapLink: e.target.value })} placeholder="https://maps.google.com/..." />
       </div>
 

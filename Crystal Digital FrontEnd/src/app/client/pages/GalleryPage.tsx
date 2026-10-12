@@ -11,6 +11,7 @@ import {
   inCategory,
 } from "../utils/categories";
 import { PublicGalleryItem } from "../types/Public";
+import { priceLabel } from "../utils/price";
 import { applyPageMeta } from "../utils/seo";
 import { Section } from "../components/pages/home/homeSection";
 import { X } from "lucide-react";
@@ -171,11 +172,26 @@ export function GalleryPage() {
                 {catLabel(lightbox.cat)}
               </div>
               <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div
-                  className="font-bold text-gray-800"
-                  style={{ fontFamily: "Poppins, sans-serif" }}
-                >
-                  {lightbox.label}
+                <div>
+                  <div
+                    className="font-bold text-gray-800"
+                    style={{ fontFamily: "Poppins, sans-serif" }}
+                  >
+                    {lightbox.label}
+                  </div>
+                  {(() => {
+                    const linked = products.find(
+                      (p) => p.id === lightbox.linkedProductId,
+                    );
+                    return linked ? (
+                      <div
+                        className="text-sm font-semibold mt-1"
+                        style={{ color: "#2563EB" }}
+                      >
+                        {priceLabel(linked.price)}
+                      </div>
+                    ) : null;
+                  })()}
                 </div>
                 {lightbox.linkedProductId &&
                   (() => {

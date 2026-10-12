@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useSiteData } from "../components/layout/siteDataProvider";
 import { cdn } from "../utils/api";
 import { catLabel } from "../utils/categories";
+import { priceLabel } from "../utils/price";
 import { useInView } from "../../client/hooks/useInView";
 import { QuoteModal } from "../../client/components/pages/Product/productQuoteModal";
 import { useState } from "react";
@@ -11,7 +12,7 @@ import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { applyPageMeta } from "../utils/seo";
 
 // Single-product page: /products/:productId (the product's slug). Shows the
-// gallery image, specs and customization fields, and opens the QuoteModal.
+// gallery image, price, features and customization fields, and opens the QuoteModal.
 export function ProductDetailPage() {
   const navigate = useNavigate();
   const { productId } = useParams<{ productId: string }>();
@@ -35,8 +36,6 @@ export function ProductDetailPage() {
 
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [selectedSize, setSelectedSize] = useState("");
-  const { ref: specsRef, visible: specsVisible } =
-    useInView(0.1);
   const { ref: customRef, visible: customVisible } =
     useInView(0.1);
 
@@ -224,6 +223,28 @@ export function ProductDetailPage() {
                 {product.fullDesc}
               </p>
 
+              {/* Price — always rendered, "N/A" when the admin has not set one */}
+              <div
+                className="mb-8 flex items-center gap-4 p-5 rounded-2xl"
+                style={{
+                  background: "#F8FAFC",
+                  border: "1px solid rgba(37,99,235,0.08)",
+                }}
+              >
+                <span
+                  className="text-xs font-bold uppercase tracking-widest"
+                  style={{ color: "#8C6D0E" }}
+                >
+                  Price
+                </span>
+                <span
+                  className="text-2xl font-bold"
+                  style={{ color: "#1F2937", fontFamily: "Poppins, sans-serif" }}
+                >
+                  {priceLabel(product.price)}
+                </span>
+              </div>
+
               {/* Available Sizes */}
               {product.sizes.length > 0 && (
                 <div
@@ -388,72 +409,6 @@ export function ProductDetailPage() {
           </div>
         </div>
 
-        {/* ── Specifications ── */}
-        <div
-          style={{
-            background: "#F8FAFC",
-            borderTop: "1px solid rgba(0,0,0,0.05)",
-          }}
-        >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <div className="flex items-center gap-4 mb-10">
-              <div
-                className="h-px flex-1"
-                style={{ background: "rgba(0,0,0,0.08)" }}
-              />
-              <div className="text-center">
-                <p
-                  className="text-xs font-bold uppercase tracking-widest mb-1"
-                  style={{ color: "#8C6D0E" }}
-                >
-                  Technical Details
-                </p>
-                <h2
-                  className="text-2xl font-bold text-gray-800"
-                  style={{ fontFamily: "Poppins, sans-serif" }}
-                >
-                  Specifications
-                </h2>
-              </div>
-              <div
-                className="h-px flex-1"
-                style={{ background: "rgba(0,0,0,0.08)" }}
-              />
-            </div>
-            <div
-              ref={specsRef}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-            >
-              {product.specs.map((spec, i) => (
-                <div
-                  key={spec.label}
-                  className="p-5 rounded-2xl"
-                  style={{
-                    background: "white",
-                    border: "1px solid rgba(37,99,235,0.08)",
-                    boxShadow: "0 2px 10px rgba(0,0,0,0.04)",
-                    opacity: specsVisible ? 1 : 0,
-                    transform: specsVisible
-                      ? "none"
-                      : "translateY(16px)",
-                    transition: `opacity 0.5s ease ${i * 55}ms, transform 0.5s ease ${i * 55}ms`,
-                  }}
-                >
-                  <p
-                    className="text-xs font-bold uppercase tracking-widest mb-2"
-                    style={{ color: "#8C6D0E" }}
-                  >
-                    {spec.label}
-                  </p>
-                  <p className="text-sm font-medium text-gray-700 leading-snug">
-                    {spec.value}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
         {/* ── Customization — Royal Blue gradient matches site testimonials ── */}
         <div
           className="relative overflow-hidden"
@@ -578,9 +533,9 @@ export function ProductDetailPage() {
                   Interested in the {product.name}?
                 </h2>
                 <p className="text-gray-300 mb-8 max-w-xl mx-auto text-base">
-                  Contact us for pricing, customization options,
-                  and delivery. Free consultation always
-                  available.
+                  Contact us for customization options, bulk
+                  pricing and delivery. Free consultation
+                  always available.
                 </p>
                 <div className="flex flex-wrap justify-center gap-4">
                   <button

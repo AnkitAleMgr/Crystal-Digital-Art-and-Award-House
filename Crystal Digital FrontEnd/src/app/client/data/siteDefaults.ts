@@ -19,6 +19,7 @@ export const SITE_DEFAULTS: PublicSettings = {
   address: "Darbarthok Marga 1, Samsung Galli, Pokhara 33700, Nepal",
   workingHours: "Monday – Saturday: 9:00 AM – 7:00 PM",
   facebookUrl: "https://www.facebook.com/crystaldigital12712/",
+  instagramUrl: "",
   mapLink:
     "https://www.google.com/maps/search/Crystal+Digital+Art+%26+Award+House+Pokhara+Nepal",
 };

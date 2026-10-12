@@ -10,10 +10,16 @@ const ProductSchema = new mongoose.Schema(
     // rather than deleting them, so this can no longer be required.
     cat: { type: String, default: "" },
     features: { type: [String], default: [] },
-    specs: {
-      type: [{ label: String, value: String }],
-      default: [],
-    },
+    // Free text rather than a Number: the admin may want to write "Rs. 2,500",
+    // "Starting from Rs. 1,200" or a per-size range, and the currency is the
+    // business's to choose. Empty is a first-class state — the site renders
+    // "N/A" rather than hiding the price, so a blank slot never looks like a bug.
+    price: { type: String, default: "", trim: true, maxlength: 60 },
+    // Off by default: not every product is engraved with the customer's logo, so
+    // the quote form only offers the artwork upload when the admin has turned it
+    // on for this product. POST /api/quotes enforces the same flag, so a crafted
+    // request cannot use a non-engraved product as free image hosting.
+    allowImageUpload: { type: Boolean, default: false },
     // The structured fields the customer MUST (or may) answer on the quote
     // form for this product. It replaced a `customizable: [String]` list of
     // marketing tags that nothing ever collected an answer for, so "required"

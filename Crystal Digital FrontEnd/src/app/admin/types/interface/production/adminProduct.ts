@@ -9,7 +9,11 @@ export interface AdminProduct {
   fullDesc: string;
   cat: string;
   features: string[];
-  specs: { label: string; value: string }[];
+  // Free text (e.g. "Rs. 2,500"). Empty means the site shows "N/A".
+  price: string;
+  // When on, the quote form offers the customer a logo/image upload for this
+  // product. Off by default — not every product is engraved.
+  allowImageUpload: boolean;
   customizationFields: { label: string; required: boolean; maxLength: number }[];
   tags: string[];
   sizes: string[];

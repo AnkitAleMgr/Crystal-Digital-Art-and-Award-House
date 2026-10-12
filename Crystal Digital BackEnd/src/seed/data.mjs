@@ -21,44 +21,32 @@ export const SEED_PRODUCTS = [
       "Available in multiple sizes",
       "Certificate of authenticity included"
     ],
-    "specs": [
-      {
-        "label": "Material",
-        "value": "Optical Crystal Glass",
-        "_id": "6ab81e48f5b0c25b6ad8324e"
-      },
-      {
-        "label": "Finish",
-        "value": "Hand-polished, glossy",
-        "_id": "6ab81e48f5b0c25b6ad8324f"
-      },
-      {
-        "label": "Sizes Available",
-        "value": "Small (15cm), Medium (20cm), Large (25cm)",
-        "_id": "6ab81e48f5b0c25b6ad83250"
-      },
-      {
-        "label": "Engraving Type",
-        "value": "Laser 2D / 3D engraving",
-        "_id": "6ab81e48f5b0c25b6ad83251"
-      },
-      {
-        "label": "Turnaround",
-        "value": "3–5 business days",
-        "_id": "6ab81e48f5b0c25b6ad83252"
-      },
-      {
-        "label": "Packaging",
-        "value": "Premium velvet gift box",
-        "_id": "6ab81e48f5b0c25b6ad83253"
-      }
-    ],
     "customizationFields": [
-      { "label": "Recipient's name & designation", "required": false, "maxLength": 300 },
-      { "label": "Company or school logo", "required": false, "maxLength": 300 },
-      { "label": "Custom message up to 150 words", "required": false, "maxLength": 300 },
-      { "label": "Achievement date", "required": false, "maxLength": 300 },
-      { "label": "Award title & category", "required": false, "maxLength": 300 }
+      {
+        "label": "Recipient's name & designation",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Company or school logo",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Custom message up to 150 words",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Achievement date",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Award title & category",
+        "required": false,
+        "maxLength": 300
+      }
     ],
     "tags": [
       "Best Seller",
@@ -85,44 +73,32 @@ export const SEED_PRODUCTS = [
       "Available in multiple wood finishes",
       "Eco-friendly and sustainably sourced"
     ],
-    "specs": [
-      {
-        "label": "Material",
-        "value": "Hardwood (Teak / Sheesham)",
-        "_id": "6ab81e4cf5b0c25b6ad83255"
-      },
-      {
-        "label": "Frame",
-        "value": "Gold-tone metallic border",
-        "_id": "6ab81e4cf5b0c25b6ad83256"
-      },
-      {
-        "label": "Sizes Available",
-        "value": "A5, A4, A3",
-        "_id": "6ab81e4cf5b0c25b6ad83257"
-      },
-      {
-        "label": "Engraving Type",
-        "value": "Laser engraving / UV print",
-        "_id": "6ab81e4cf5b0c25b6ad83258"
-      },
-      {
-        "label": "Turnaround",
-        "value": "2–4 business days",
-        "_id": "6ab81e4cf5b0c25b6ad83259"
-      },
-      {
-        "label": "Mounting",
-        "value": "Wall-mount hook included",
-        "_id": "6ab81e4cf5b0c25b6ad8325a"
-      }
-    ],
     "customizationFields": [
-      { "label": "Recipient name & title", "required": false, "maxLength": 300 },
-      { "label": "Logo & badge printing", "required": false, "maxLength": 300 },
-      { "label": "Custom message or citation", "required": false, "maxLength": 300 },
-      { "label": "Date and event details", "required": false, "maxLength": 300 },
-      { "label": "Colour-fill engraving", "required": false, "maxLength": 300 }
+      {
+        "label": "Recipient name & title",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Logo & badge printing",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Custom message or citation",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Date and event details",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Colour-fill engraving",
+        "required": false,
+        "maxLength": 300
+      }
     ],
     "tags": [
       "Popular"
@@ -148,44 +124,32 @@ export const SEED_PRODUCTS = [
       "Stable anti-tip weighted base",
       "Available from 6 inches to 36 inches"
     ],
-    "specs": [
-      {
-        "label": "Material",
-        "value": "Zinc alloy / Metal composite",
-        "_id": "6ab81e50f5b0c25b6ad8325c"
-      },
-      {
-        "label": "Finish",
-        "value": "Gold electroplating",
-        "_id": "6ab81e50f5b0c25b6ad8325d"
-      },
-      {
-        "label": "Heights Available",
-        "value": "15cm – 90cm",
-        "_id": "6ab81e50f5b0c25b6ad8325e"
-      },
-      {
-        "label": "Base",
-        "value": "Marble / wood base option",
-        "_id": "6ab81e50f5b0c25b6ad8325f"
-      },
-      {
-        "label": "Name Plate",
-        "value": "Engraved brass plate",
-        "_id": "6ab81e50f5b0c25b6ad83260"
-      },
-      {
-        "label": "Turnaround",
-        "value": "1–3 business days",
-        "_id": "6ab81e50f5b0c25b6ad83261"
-      }
-    ],
     "customizationFields": [
-      { "label": "Trophy height and design style", "required": false, "maxLength": 300 },
-      { "label": "Name plate text & event details", "required": false, "maxLength": 300 },
-      { "label": "Topper style (sport, academic, cultural)", "required": false, "maxLength": 300 },
-      { "label": "Base material (wood, marble, acrylic)", "required": false, "maxLength": 300 },
-      { "label": "Ribbon or medal add-on", "required": false, "maxLength": 300 }
+      {
+        "label": "Trophy height and design style",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Name plate text & event details",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Topper style (sport, academic, cultural)",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Base material (wood, marble, acrylic)",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Ribbon or medal add-on",
+        "required": false,
+        "maxLength": 300
+      }
     ],
     "tags": [
       "Most Popular"
@@ -216,44 +180,32 @@ export const SEED_PRODUCTS = [
       "Laser-engraved name plate",
       "Sturdy and durable construction"
     ],
-    "specs": [
-      {
-        "label": "Material",
-        "value": "Solid wood (hand-carved)",
-        "_id": "6ab81e56f5b0c25b6ad83263"
-      },
-      {
-        "label": "Style",
-        "value": "Temple / Pagoda architecture",
-        "_id": "6ab81e56f5b0c25b6ad83264"
-      },
-      {
-        "label": "Finish",
-        "value": "Natural lacquer or painted",
-        "_id": "6ab81e56f5b0c25b6ad83265"
-      },
-      {
-        "label": "Heights Available",
-        "value": "20cm – 60cm",
-        "_id": "6ab81e56f5b0c25b6ad83266"
-      },
-      {
-        "label": "Turnaround",
-        "value": "3–7 business days",
-        "_id": "6ab81e56f5b0c25b6ad83267"
-      },
-      {
-        "label": "Engraving",
-        "value": "Brass plate laser engraving",
-        "_id": "6ab81e56f5b0c25b6ad83268"
-      }
-    ],
     "customizationFields": [
-      { "label": "Carving style and motifs", "required": false, "maxLength": 300 },
-      { "label": "Wood type and colour", "required": false, "maxLength": 300 },
-      { "label": "Name plate inscription", "required": false, "maxLength": 300 },
-      { "label": "Size and height", "required": false, "maxLength": 300 },
-      { "label": "Cultural symbol or logo", "required": false, "maxLength": 300 }
+      {
+        "label": "Carving style and motifs",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Wood type and colour",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Name plate inscription",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Size and height",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Cultural symbol or logo",
+        "required": false,
+        "maxLength": 300
+      }
     ],
     "tags": [
       "Unique",
@@ -282,44 +234,32 @@ export const SEED_PRODUCTS = [
       "Fast turnaround for event deadlines",
       "Velvet pouch packaging option"
     ],
-    "specs": [
-      {
-        "label": "Material",
-        "value": "Zinc alloy / Aluminium",
-        "_id": "6ab81e5af5b0c25b6ad8326a"
-      },
-      {
-        "label": "Finish",
-        "value": "Gold, Silver, Bronze plating",
-        "_id": "6ab81e5af5b0c25b6ad8326b"
-      },
-      {
-        "label": "Diameter",
-        "value": "50mm, 65mm, 75mm",
-        "_id": "6ab81e5af5b0c25b6ad8326c"
-      },
-      {
-        "label": "Ribbon",
-        "value": "Custom colour, 18–22mm wide",
-        "_id": "6ab81e5af5b0c25b6ad8326d"
-      },
-      {
-        "label": "Minimum Order",
-        "value": "10 pieces",
-        "_id": "6ab81e5af5b0c25b6ad8326e"
-      },
-      {
-        "label": "Turnaround",
-        "value": "2–5 business days",
-        "_id": "6ab81e5af5b0c25b6ad8326f"
-      }
-    ],
     "customizationFields": [
-      { "label": "Event name and logo", "required": false, "maxLength": 300 },
-      { "label": "Position text (1st, 2nd, 3rd)", "required": false, "maxLength": 300 },
-      { "label": "Year and date", "required": false, "maxLength": 300 },
-      { "label": "Custom ribbon colour", "required": false, "maxLength": 300 },
-      { "label": "Back-side engraving", "required": false, "maxLength": 300 }
+      {
+        "label": "Event name and logo",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Position text (1st, 2nd, 3rd)",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Year and date",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Custom ribbon colour",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Back-side engraving",
+        "required": false,
+        "maxLength": 300
+      }
     ],
     "tags": [
       "Bulk Orders",
@@ -346,44 +286,32 @@ export const SEED_PRODUCTS = [
       "Packaging and delivery options",
       "Sample viewing at our store"
     ],
-    "specs": [
-      {
-        "label": "Product Range",
-        "value": "Awards, Trophies, Plaques, Medals, Gifts",
-        "_id": "6ab81e62f5b0c25b6ad83271"
-      },
-      {
-        "label": "Customization",
-        "value": "Full custom design support",
-        "_id": "6ab81e62f5b0c25b6ad83272"
-      },
-      {
-        "label": "Minimum Order",
-        "value": "1 piece (no minimum)",
-        "_id": "6ab81e62f5b0c25b6ad83273"
-      },
-      {
-        "label": "Bulk Discount",
-        "value": "Available for 10+ orders",
-        "_id": "6ab81e62f5b0c25b6ad83274"
-      },
-      {
-        "label": "Consultation",
-        "value": "Free design consultation",
-        "_id": "6ab81e62f5b0c25b6ad83275"
-      },
-      {
-        "label": "Turnaround",
-        "value": "Varies by product",
-        "_id": "6ab81e62f5b0c25b6ad83276"
-      }
-    ],
     "customizationFields": [
-      { "label": "Any text, name, or message", "required": false, "maxLength": 300 },
-      { "label": "Logo and brand identity", "required": false, "maxLength": 300 },
-      { "label": "Colour and material", "required": false, "maxLength": 300 },
-      { "label": "Size and quantity", "required": false, "maxLength": 300 },
-      { "label": "Gift wrapping and packaging", "required": false, "maxLength": 300 }
+      {
+        "label": "Any text, name, or message",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Logo and brand identity",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Colour and material",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Size and quantity",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Gift wrapping and packaging",
+        "required": false,
+        "maxLength": 300
+      }
     ],
     "tags": [
       "Full Range"
@@ -407,44 +335,32 @@ export const SEED_PRODUCTS = [
       "Engraved base plates included",
       "Event-ready fast turnaround"
     ],
-    "specs": [
-      {
-        "label": "Material",
-        "value": "Metal composite / Zinc alloy",
-        "_id": "6ab81e67f5b0c25b6ad83278"
-      },
-      {
-        "label": "Set Composition",
-        "value": "1st, 2nd, 3rd + participation",
-        "_id": "6ab81e67f5b0c25b6ad83279"
-      },
-      {
-        "label": "Sports Designs",
-        "value": "Cricket, Football, Volleyball & more",
-        "_id": "6ab81e67f5b0c25b6ad8327a"
-      },
-      {
-        "label": "Sizes",
-        "value": "20cm – 60cm per tier",
-        "_id": "6ab81e67f5b0c25b6ad8327b"
-      },
-      {
-        "label": "Turnaround",
-        "value": "1–3 business days",
-        "_id": "6ab81e67f5b0c25b6ad8327c"
-      },
-      {
-        "label": "Add-ons",
-        "value": "Medals, certificates, ribbons",
-        "_id": "6ab81e67f5b0c25b6ad8327d"
-      }
-    ],
     "customizationFields": [
-      { "label": "Sport type and figurine design", "required": false, "maxLength": 300 },
-      { "label": "Name plate text", "required": false, "maxLength": 300 },
-      { "label": "Number of positions in set", "required": false, "maxLength": 300 },
-      { "label": "Base style and material", "required": false, "maxLength": 300 },
-      { "label": "Matching medal set add-on", "required": false, "maxLength": 300 }
+      {
+        "label": "Sport type and figurine design",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Name plate text",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Number of positions in set",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Base style and material",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Matching medal set add-on",
+        "required": false,
+        "maxLength": 300
+      }
     ],
     "tags": [
       "Sets",
@@ -473,44 +389,32 @@ export const SEED_PRODUCTS = [
       "Velvet-lined gift box packaging",
       "Ideal for formal felicitation"
     ],
-    "specs": [
-      {
-        "label": "Material",
-        "value": "Metal with gold plating",
-        "_id": "6ab81e6bf5b0c25b6ad8327f"
-      },
-      {
-        "label": "Base",
-        "value": "Premium marble or rosewood",
-        "_id": "6ab81e6bf5b0c25b6ad83280"
-      },
-      {
-        "label": "Heights Available",
-        "value": "30cm – 75cm",
-        "_id": "6ab81e6bf5b0c25b6ad83281"
-      },
-      {
-        "label": "Name Plate",
-        "value": "Engraved brass / gold plate",
-        "_id": "6ab81e6bf5b0c25b6ad83282"
-      },
-      {
-        "label": "Packaging",
-        "value": "Velvet-lined gift box",
-        "_id": "6ab81e6bf5b0c25b6ad83283"
-      },
-      {
-        "label": "Turnaround",
-        "value": "2–4 business days",
-        "_id": "6ab81e6bf5b0c25b6ad83284"
-      }
-    ],
     "customizationFields": [
-      { "label": "Height and design style", "required": false, "maxLength": 300 },
-      { "label": "Engraved name and title", "required": false, "maxLength": 300 },
-      { "label": "Base material and colour", "required": false, "maxLength": 300 },
-      { "label": "Personal message inscription", "required": false, "maxLength": 300 },
-      { "label": "Logo or emblem on body", "required": false, "maxLength": 300 }
+      {
+        "label": "Height and design style",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Engraved name and title",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Base material and colour",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Personal message inscription",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Logo or emblem on body",
+        "required": false,
+        "maxLength": 300
+      }
     ],
     "tags": [
       "Premium",
@@ -538,44 +442,32 @@ export const SEED_PRODUCTS = [
       "Unique — no two pieces identical",
       "Artisan-made locally in Nepal"
     ],
-    "specs": [
-      {
-        "label": "Material",
-        "value": "Sal wood / Teak (hand-carved)",
-        "_id": "6ab81e70f5b0c25b6ad83286"
-      },
-      {
-        "label": "Style",
-        "value": "Multi-tiered pagoda design",
-        "_id": "6ab81e70f5b0c25b6ad83287"
-      },
-      {
-        "label": "Finish",
-        "value": "Natural wood, lacquer, gold accents",
-        "_id": "6ab81e70f5b0c25b6ad83288"
-      },
-      {
-        "label": "Heights",
-        "value": "25cm – 70cm",
-        "_id": "6ab81e70f5b0c25b6ad83289"
-      },
-      {
-        "label": "Turnaround",
-        "value": "5–10 business days",
-        "_id": "6ab81e70f5b0c25b6ad8328a"
-      },
-      {
-        "label": "Authenticity",
-        "value": "Handmade certificate included",
-        "_id": "6ab81e70f5b0c25b6ad8328b"
-      }
-    ],
     "customizationFields": [
-      { "label": "Carving depth and motifs", "required": false, "maxLength": 300 },
-      { "label": "Colour scheme and paint", "required": false, "maxLength": 300 },
-      { "label": "Inscription plate text", "required": false, "maxLength": 300 },
-      { "label": "Tier count and height", "required": false, "maxLength": 300 },
-      { "label": "Cultural symbol integration", "required": false, "maxLength": 300 }
+      {
+        "label": "Carving depth and motifs",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Colour scheme and paint",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Inscription plate text",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Tier count and height",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Cultural symbol integration",
+        "required": false,
+        "maxLength": 300
+      }
     ],
     "tags": [
       "Handmade",
@@ -604,44 +496,32 @@ export const SEED_PRODUCTS = [
       "Weather-resistant finish",
       "Custom branding on case"
     ],
-    "specs": [
-      {
-        "label": "Material",
-        "value": "Metal + crystal elements",
-        "_id": "6ab81e74f5b0c25b6ad8328d"
-      },
-      {
-        "label": "Display Case",
-        "value": "Optional custom glass case",
-        "_id": "6ab81e74f5b0c25b6ad8328e"
-      },
-      {
-        "label": "Base",
-        "value": "Illuminated LED base option",
-        "_id": "6ab81e74f5b0c25b6ad8328f"
-      },
-      {
-        "label": "Heights",
-        "value": "35cm – 80cm",
-        "_id": "6ab81e74f5b0c25b6ad83290"
-      },
-      {
-        "label": "Turnaround",
-        "value": "5–7 business days",
-        "_id": "6ab81e74f5b0c25b6ad83291"
-      },
-      {
-        "label": "Warranty",
-        "value": "Lifetime quality guarantee",
-        "_id": "6ab81e74f5b0c25b6ad83292"
-      }
-    ],
     "customizationFields": [
-      { "label": "Trophy height and shape", "required": false, "maxLength": 300 },
-      { "label": "Crystal colour and cut style", "required": false, "maxLength": 300 },
-      { "label": "Engraved name plate", "required": false, "maxLength": 300 },
-      { "label": "Base lighting option", "required": false, "maxLength": 300 },
-      { "label": "Glass case dimensions", "required": false, "maxLength": 300 }
+      {
+        "label": "Trophy height and shape",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Crystal colour and cut style",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Engraved name plate",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Base lighting option",
+        "required": false,
+        "maxLength": 300
+      },
+      {
+        "label": "Glass case dimensions",
+        "required": false,
+        "maxLength": 300
+      }
     ],
     "tags": [
       "Luxury",

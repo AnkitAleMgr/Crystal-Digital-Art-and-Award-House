@@ -4,6 +4,7 @@ import { Product } from "../../../types/Product";
 import { ImageWithFallback } from "../../../../components/figma/ImageWithFallback";
 import { PublicApiError, publicApi } from "../../../utils/api";
 import { catLabel } from "../../../utils/categories";
+import { priceLabel } from "../../../utils/price";
 import { useSiteData } from "../../layout/siteDataProvider";
 
 // Overlay asking for a quote on one product: standard details, the product's
@@ -281,6 +282,15 @@ export function QuoteModal({
                   >
                     {catLabel(product.cat)}
                   </span>
+                  <span
+                    className="block mt-1.5 text-sm font-bold"
+                    style={{
+                      color: "#D4AF37",
+                      fontFamily: "Poppins, sans-serif",
+                    }}
+                  >
+                    {priceLabel(product.price)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -438,7 +448,8 @@ export function QuoteModal({
                 </div>
               </div>
 
-              {/* Logo upload */}
+              {/* Logo upload — only for products the admin flagged as engraved/printed */}
+              {product.allowImageUpload && (
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
                   Logo / Image Upload
@@ -494,6 +505,7 @@ export function QuoteModal({
                   />
                 </label>
               </div>
+              )}
 
               {/* Size — required whenever the product offers a choice */}
               {product.sizes.length > 0 && (

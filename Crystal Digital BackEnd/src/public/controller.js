@@ -28,7 +28,8 @@ const publicProduct = (doc) => ({
   fullDesc: doc.fullDesc,
   cat: doc.cat,
   features: doc.features,
-  specs: doc.specs,
+  price: doc.price,
+  allowImageUpload: Boolean(doc.allowImageUpload),
   customizationFields: doc.customizationFields,
   tags: doc.tags,
   sizes: doc.sizes,
@@ -251,6 +252,11 @@ export const createPublicQuote = async (req, res) => {
 
   const productSlug = field(req.body.productSlug, 160);
 
+  // Whether an attached file may be stored. True for a general enquiry (the
+  // contact form never sends one, so there is nothing to gate); for a
+  // product-scoped quote it mirrors the product's admin-set flag.
+  let artworkAllowed = true;
+
   // A product-scoped quote has to resolve to a real product before its size and
   // customization rules can be checked. The general contact form posts no slug,
   // so this is skipped entirely for it rather than being an error.
@@ -281,6 +287,11 @@ export const createPublicQuote = async (req, res) => {
     const answers = readCustomization(product, req.body.customization);
     Object.assign(errors, answers.errors);
     req.quoteCustomization = answers.stored;
+
+    // The artwork upload is only accepted for a product whose admin turned it on.
+    // Products without the flag drop the file rather than reject the quote, so
+    // the endpoint is never free image hosting.
+    artworkAllowed = product.allowImageUpload === true;
   }
 
   if (Object.keys(errors).length > 0) {
@@ -308,9 +319,11 @@ export const createPublicQuote = async (req, res) => {
       customization: req.quoteCustomization ?? [],
       // Taken from the uploaded part rather than a separate field, so the name
       // the admin reads always describes the image that was actually stored.
-      attachment: req.file
-        ? field(req.file.originalname, 160)
-        : field(req.body.attachment, 160),
+      // A file on a product that does not accept uploads is ignored outright.
+      attachment:
+        req.file && artworkAllowed
+          ? field(req.file.originalname, 160)
+          : field(req.body.attachment, 160),
       status: "new",
     });
 
@@ -319,8 +332,10 @@ export const createPublicQuote = async (req, res) => {
     // abandons the form leaves nothing behind on Cloudinary. The quote row is
     // written first, so the worst case is a quote with the filename and no
     // image — the state the form used to be in permanently.
-    if (req.file && !req.artworkOverBudget) {
+    if (req.file && artworkAllowed && !req.artworkOverBudget) {
       doc = await attachArtwork(doc, req.file);
+    } else if (req.file && !artworkAllowed) {
+      console.warn(`[artwork] ${doc._id} product does not accept image uploads — file dropped`);
     } else if (req.file) {
       console.warn(`[artwork] over daily budget — ${doc._id} saved without its image`);
     }
@@ -329,8 +344,10 @@ export const createPublicQuote = async (req, res) => {
     // must not turn a successful submission into a failed form — the owner also
     // sees every enquiry in the admin dashboard regardless. Awaited only in the
     // sense that the artwork link above is already on `doc`, so the alert can
-    // include it.
-    notifyOwnerOfQuote(doc);
+    // include it. `product` is the lean row loaded above (null for a general
+    // enquiry), so the owner alert can show the product's list price alongside
+    // the enquiry without a second lookup.
+    notifyOwnerOfQuote(doc, product?.price ?? "");
 
     res.status(201).json({
       status: true,

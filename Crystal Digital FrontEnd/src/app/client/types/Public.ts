@@ -38,6 +38,7 @@ export interface PublicSettings {
   address: string;
   mapLink: string;
   facebookUrl: string;
+  instagramUrl: string;
   workingHours: string;
   whatsapp: string;
 }

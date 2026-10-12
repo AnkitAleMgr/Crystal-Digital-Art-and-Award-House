@@ -35,6 +35,10 @@ const strip = (doc) => {
     updatedAt,
     imgUrl,
     imgPublicId,
+    // Legacy: the Specifications field was removed from the schema, but lean()
+    // returns the raw BSON, so a doc that still carries it would put it back
+    // into the seed file. Dropped here so the seed mirrors the live schema.
+    specs,
     ...rest
   } = doc;
   return { sourceImage: basename(imgPublicId), ...rest };
