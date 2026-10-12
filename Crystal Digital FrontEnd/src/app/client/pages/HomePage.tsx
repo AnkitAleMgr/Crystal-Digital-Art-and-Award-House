@@ -28,6 +28,11 @@ export function HomePage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const goToProducts = () => {
+    navigate("/products");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const goToQuote = () => {
     const el = document.getElementById("premium-products");
 
@@ -66,12 +71,25 @@ export function HomePage() {
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 mb-10">
           <SectionHeading>Premium Awards & Products</SectionHeading>
 
-          <button
-            onClick={goToGallery}
-            className="self-start lg:self-auto px-5 py-2.5 rounded-xl text-sm font-semibold text-blue-600 border border-blue-200 hover:bg-blue-50 transition-colors"
-          >
-            View Full Gallery →
-          </button>
+          <div className="flex flex-wrap gap-3 self-start lg:self-auto">
+            <button
+              onClick={goToProducts}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-105"
+              style={{
+                background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
+                fontFamily: "Poppins, sans-serif",
+              }}
+            >
+              View All Products →
+            </button>
+
+            <button
+              onClick={goToGallery}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-blue-600 border border-blue-200 hover:bg-blue-50 transition-colors"
+            >
+              View Full Gallery →
+            </button>
+          </div>
         </div>
 
         <FeaturedProducts />

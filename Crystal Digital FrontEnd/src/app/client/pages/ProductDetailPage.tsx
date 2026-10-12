@@ -65,11 +65,11 @@ export function ProductDetailPage() {
           The product you are looking for does not exist.
         </p>
         <button
-          onClick={() => navigate("/gallery")}
+          onClick={() => navigate("/products")}
           className="px-5 py-3 rounded-xl font-semibold text-white"
           style={{ background: "linear-gradient(135deg, #2563EB, #1D4ED8)" }}
         >
-          Back to Gallery
+          Browse Products
         </button>
       </div>
     );
@@ -108,9 +108,12 @@ export function ProductDetailPage() {
               Home
             </button>
             <ChevronRight size={10} className="text-gray-300" />
-            <span className="text-xs text-gray-400">
+            <button
+              onClick={() => navigate("/products")}
+              className="text-xs font-medium text-gray-400 hover:text-blue-600 transition-colors"
+            >
               Products
-            </span>
+            </button>
             <ChevronRight size={10} className="text-gray-300" />
             <span
               className="text-xs font-semibold"
@@ -550,7 +553,7 @@ export function ProductDetailPage() {
                     Get a Free Quote
                   </button>
                   <button
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/products")}
                     className="px-8 py-4 rounded-xl font-semibold text-white border-2 border-white/30 hover:bg-white/10 transition-all flex items-center gap-2"
                     style={{
                       fontFamily: "Poppins, sans-serif",

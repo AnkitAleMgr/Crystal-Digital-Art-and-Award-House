@@ -18,4 +18,6 @@ export interface Product {
   customizationFields: { label: string; required: boolean; maxLength: number }[];
   tags: string[];
   sizes: string[];
+  // When the product was created; the listing page sorts "Newest" on it.
+  createdAt?: string;
 }

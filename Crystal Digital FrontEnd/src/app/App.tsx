@@ -21,6 +21,7 @@ const HomePage = lazyPage("HomePage", () => import("./client/pages/HomePage"));
 const AboutPage = lazyPage("AboutPage", () => import("./client/pages/AboutPage"));
 const GalleryPage = lazyPage("GalleryPage", () => import("./client/pages/GalleryPage"));
 const ContactPage = lazyPage("ContactPage", () => import("./client/pages/ContactPage"));
+const ProductsPage = lazyPage("ProductsPage", () => import("./client/pages/ProductsPage"));
 const ProductDetailPage = lazyPage("ProductDetailPage", () => import("./client/pages/ProductDetailPage"));
 const SubscribeConfirmPage = lazyPage("SubscribeConfirmPage", () => import("./client/pages/subscribeConfirmPage"));
 const UnsubscribePage = lazyPage("UnsubscribePage", () => import("./client/pages/unsubscribePage"));
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="/about" element={<AboutPage/>} />
           <Route path="/gallery" element={<GalleryPage/>} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/products" element={<ProductsPage />} />
           <Route
             path="/products/:productId"
             element={<ProductDetailPage />}

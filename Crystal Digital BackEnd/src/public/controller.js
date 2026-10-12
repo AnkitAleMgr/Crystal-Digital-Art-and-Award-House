@@ -33,6 +33,9 @@ const publicProduct = (doc) => ({
   customizationFields: doc.customizationFields,
   tags: doc.tags,
   sizes: doc.sizes,
+  // The products listing sorts by "Newest", so the timestamp has to reach the
+  // browser — the API itself returns them oldest-first.
+  createdAt: doc.createdAt,
 });
 
 // Gallery items are addressed by their own id (only products use slugs), and
