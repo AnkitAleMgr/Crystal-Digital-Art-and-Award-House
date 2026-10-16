@@ -239,12 +239,6 @@ export function CategorySelect({
       )}
 
       {localError && <p className="text-xs text-red-600">{localError}</p>}
-
-      <p className="text-xs text-gray-400">
-        Categories are shared with the gallery and appear as the filter tabs on
-        the home and gallery pages. Deleting one leaves its products
-        uncategorized — it never deletes them.
-      </p>
     </div>
   );
 }

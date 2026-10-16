@@ -7,7 +7,7 @@ import { formatWhen } from "../utils/formatWhen";
 import { downloadCsv } from "../utils/csv";
 import { STATUS_COLORS } from "../constants/admin";
 import { useAdmin } from "../components/layout/adminProvider";
-import { AlertCircle, Download, ExternalLink, Eye, Loader2, RefreshCw, Search, Trash2, User } from "lucide-react";
+import { AlertCircle, Download, ExternalLink, Eye, Loader2, RefreshCw, Search, Trash2, User, Wand2 } from "lucide-react";
 
 function Detail({ label, value }: { label: string; value: string }) {
   if (!value) return null;
@@ -19,12 +19,28 @@ function Detail({ label, value }: { label: string; value: string }) {
   );
 }
 
+// Marks a custom-product request so staff can spot it at a glance and triage it
+// apart from an ordinary catalogue quote.
+function CustomTag() {
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide"
+      style={{ background: "rgba(212,175,55,0.15)", color: "#8C6D0E", border: "1px solid rgba(212,175,55,0.4)" }}
+    >
+      <Wand2 size={10} /> Custom
+    </span>
+  );
+}
+
 // Quote requests: status filter, search, status updates, CSV export and delete.
 export function AdminQuotes() {
   const { quotes, updateQuoteStatus, deleteQuote, refreshQuotes, quoteCount, error, clearError } = useAdmin();
   const [viewing, setViewing] = useState<QuoteRequest | null>(null);
   const [deleting, setDeleting] = useState<QuoteRequest | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | QuoteRequest["status"]>("all");
+  // Custom-product requests ride the same quote pipeline but need triaging apart,
+  // so they get their own type filter alongside the status one.
+  const [typeFilter, setTypeFilter] = useState<"all" | "custom" | "standard">("all");
   const [search, setSearch] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,6 +52,8 @@ export function AdminQuotes() {
 
   const filtered = quotes.filter((q) =>
     (statusFilter === "all" || q.status === statusFilter) &&
+    (typeFilter === "all" ||
+      (typeFilter === "custom" ? q.isCustom : !q.isCustom)) &&
     (q.name.toLowerCase().includes(search.toLowerCase()) || q.product.toLowerCase().includes(search.toLowerCase()) || q.email.toLowerCase().includes(search.toLowerCase()))
   );
 
@@ -50,6 +68,7 @@ export function AdminQuotes() {
         "service",
         "size",
         "quantity",
+        "needed_by",
         "customization",
         "attachment",
         "artwork_url",
@@ -66,6 +85,7 @@ export function AdminQuotes() {
         q.service,
         q.size,
         q.quantity,
+        q.neededBy,
         // One "label: value" per line in a single cell, so a spreadsheet keeps a
         // fixed column count while still carrying every structured answer. The
         // CSV writer quotes it, so the newlines and colons are safe.
@@ -155,6 +175,11 @@ export function AdminQuotes() {
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, product, email..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 bg-white" />
         </div>
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 bg-white">
+          <option value="all">All Types</option>
+          <option value="custom">Custom Requests</option>
+          <option value="standard">Standard Quotes</option>
+        </select>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 bg-white">
           <option value="all">All Status</option>
           <option value="new">New</option>
@@ -180,7 +205,10 @@ export function AdminQuotes() {
               {filtered.map((q) => (
                 <tr key={q.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-5 py-4">
-                    <div className="font-semibold text-gray-800 text-sm">{q.name}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-800 text-sm">{q.name}</span>
+                      {q.isCustom && <CustomTag />}
+                    </div>
                     <div className="text-gray-500 text-xs">{q.email}</div>
                   </td>
                   <td className="px-5 py-4 hidden sm:table-cell">
@@ -225,7 +253,10 @@ export function AdminQuotes() {
                 <User size={20} className="text-blue-600" />
               </div>
               <div>
-                <div className="font-bold text-gray-800">{viewing.name}</div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-gray-800">{viewing.name}</span>
+                  {viewing.isCustom && <CustomTag />}
+                </div>
                 <div className="text-sm text-gray-500">{viewing.email} · {viewing.phone}</div>
               </div>
               <div className="ml-auto"><Badge status={viewing.status} /></div>
@@ -234,6 +265,7 @@ export function AdminQuotes() {
               <Detail label="Product Interested In" value={viewing.product} />
               <Detail label="Service Enquiry" value={viewing.service} />
               <Detail label="Quantity" value={viewing.quantity} />
+              <Detail label="Needed By" value={viewing.neededBy} />
               <Detail label="Request Date" value={formatWhen(viewing.createdAt)} />
               <div className="col-span-2">
                 <div className="text-xs text-gray-500 mb-1">Selected Size</div>

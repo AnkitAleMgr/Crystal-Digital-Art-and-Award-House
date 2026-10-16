@@ -535,6 +535,306 @@ export const SEED_PRODUCTS = [
       "80cm"
     ],
     "slug": "premium-display-trophy"
+  },
+  {
+    "sourceImage": "image-2",
+    "name": "Demo Crystal Cube 1",
+    "desc": "Demo crystal cube for sample use.",
+    "fullDesc": "Demo product 1 - placeholder details only, no image upload needed.",
+    "cat": "Crystal",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-crystal-cube-1"
+  },
+  {
+    "sourceImage": "image-3",
+    "name": "Demo Acrylic Plaque 2",
+    "desc": "Demo acrylic plaque for sample use.",
+    "fullDesc": "Demo product 2 - placeholder details only, no image upload needed.",
+    "cat": "Plaques",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-acrylic-plaque-2"
+  },
+  {
+    "sourceImage": "image-4",
+    "name": "Demo Resin Trophy 3",
+    "desc": "Demo resin trophy for sample use.",
+    "fullDesc": "Demo product 3 - placeholder details only, no image upload needed.",
+    "cat": "Trophies",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-resin-trophy-3"
+  },
+  {
+    "sourceImage": "image-5",
+    "name": "Demo Brass Medal 4",
+    "desc": "Demo brass medal for sample use.",
+    "fullDesc": "Demo product 4 - placeholder details only, no image upload needed.",
+    "cat": "Medals",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-brass-medal-4"
+  },
+  {
+    "sourceImage": "image-6",
+    "name": "Demo Gift Set 5",
+    "desc": "Demo gift set for sample use.",
+    "fullDesc": "Demo product 5 - placeholder details only, no image upload needed.",
+    "cat": "Gifts",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-gift-set-5"
+  },
+  {
+    "sourceImage": "image-2",
+    "name": "Demo Crystal Cube 6",
+    "desc": "Demo crystal cube for sample use.",
+    "fullDesc": "Demo product 6 - placeholder details only, no image upload needed.",
+    "cat": "Crystal",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-crystal-cube-6"
+  },
+  {
+    "sourceImage": "image-3",
+    "name": "Demo Acrylic Plaque 7",
+    "desc": "Demo acrylic plaque for sample use.",
+    "fullDesc": "Demo product 7 - placeholder details only, no image upload needed.",
+    "cat": "Plaques",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-acrylic-plaque-7"
+  },
+  {
+    "sourceImage": "image-4",
+    "name": "Demo Resin Trophy 8",
+    "desc": "Demo resin trophy for sample use.",
+    "fullDesc": "Demo product 8 - placeholder details only, no image upload needed.",
+    "cat": "Trophies",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-resin-trophy-8"
+  },
+  {
+    "sourceImage": "image-5",
+    "name": "Demo Brass Medal 9",
+    "desc": "Demo brass medal for sample use.",
+    "fullDesc": "Demo product 9 - placeholder details only, no image upload needed.",
+    "cat": "Medals",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-brass-medal-9"
+  },
+  {
+    "sourceImage": "image-6",
+    "name": "Demo Gift Set 10",
+    "desc": "Demo gift set for sample use.",
+    "fullDesc": "Demo product 10 - placeholder details only, no image upload needed.",
+    "cat": "Gifts",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-gift-set-10"
+  },
+  {
+    "sourceImage": "image-2",
+    "name": "Demo Crystal Cube 11",
+    "desc": "Demo crystal cube for sample use.",
+    "fullDesc": "Demo product 11 - placeholder details only, no image upload needed.",
+    "cat": "Crystal",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-crystal-cube-11"
+  },
+  {
+    "sourceImage": "image-3",
+    "name": "Demo Acrylic Plaque 12",
+    "desc": "Demo acrylic plaque for sample use.",
+    "fullDesc": "Demo product 12 - placeholder details only, no image upload needed.",
+    "cat": "Plaques",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-acrylic-plaque-12"
+  },
+  {
+    "sourceImage": "image-4",
+    "name": "Demo Resin Trophy 13",
+    "desc": "Demo resin trophy for sample use.",
+    "fullDesc": "Demo product 13 - placeholder details only, no image upload needed.",
+    "cat": "Trophies",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-resin-trophy-13"
+  },
+  {
+    "sourceImage": "image-5",
+    "name": "Demo Brass Medal 14",
+    "desc": "Demo brass medal for sample use.",
+    "fullDesc": "Demo product 14 - placeholder details only, no image upload needed.",
+    "cat": "Medals",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-brass-medal-14"
+  },
+  {
+    "sourceImage": "image-6",
+    "name": "Demo Gift Set 15",
+    "desc": "Demo gift set for sample use.",
+    "fullDesc": "Demo product 15 - placeholder details only, no image upload needed.",
+    "cat": "Gifts",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-gift-set-15"
+  },
+  {
+    "sourceImage": "image-2",
+    "name": "Demo Crystal Cube 16",
+    "desc": "Demo crystal cube for sample use.",
+    "fullDesc": "Demo product 16 - placeholder details only, no image upload needed.",
+    "cat": "Crystal",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-crystal-cube-16"
+  },
+  {
+    "sourceImage": "image-3",
+    "name": "Demo Acrylic Plaque 17",
+    "desc": "Demo acrylic plaque for sample use.",
+    "fullDesc": "Demo product 17 - placeholder details only, no image upload needed.",
+    "cat": "Plaques",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-acrylic-plaque-17"
+  },
+  {
+    "sourceImage": "image-4",
+    "name": "Demo Resin Trophy 18",
+    "desc": "Demo resin trophy for sample use.",
+    "fullDesc": "Demo product 18 - placeholder details only, no image upload needed.",
+    "cat": "Trophies",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-resin-trophy-18"
+  },
+  {
+    "sourceImage": "image-5",
+    "name": "Demo Brass Medal 19",
+    "desc": "Demo brass medal for sample use.",
+    "fullDesc": "Demo product 19 - placeholder details only, no image upload needed.",
+    "cat": "Medals",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-brass-medal-19"
+  },
+  {
+    "sourceImage": "image-6",
+    "name": "Demo Gift Set 20",
+    "desc": "Demo gift set for sample use.",
+    "fullDesc": "Demo product 20 - placeholder details only, no image upload needed.",
+    "cat": "Gifts",
+    "features": ["Sample feature", "Customizable", "Quality built"],
+    "customizationFields": [
+      { "label": "Engraving text", "required": false, "maxLength": 300 },
+      { "label": "Notes", "required": false, "maxLength": 300 }
+    ],
+    "tags": ["Demo"],
+    "sizes": ["Standard"],
+    "slug": "demo-gift-set-20"
   }
 ];
 

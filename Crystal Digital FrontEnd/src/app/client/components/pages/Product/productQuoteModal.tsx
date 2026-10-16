@@ -9,13 +9,21 @@ import { useSiteData } from "../../layout/siteDataProvider";
 
 // Overlay asking for a quote on one product: standard details, the product's
 // customization fields, optional artwork upload, and a POST to /api/quotes.
+//
+// `custom` switches it to a custom-product request — the customer saw this
+// product and wants their own twist on it. The product's size and customization
+// fields are hidden (they do not describe a bespoke piece), the description
+// becomes the required centrepiece, and the reference-image upload is always
+// offered. The request is stored as a normal quote flagged `isCustom`.
 export function QuoteModal({
   product,
   initialSize,
+  custom = false,
   onClose,
 }: {
   product: Product;
   initialSize?: string;
+  custom?: boolean;
   onClose: () => void;
 }) {
   const [sent, setSent] = useState(false);
@@ -32,6 +40,10 @@ export function QuoteModal({
     phone: "",
     email: "",
     quantity: "",
+    // The date the order should be ready by (the date input's YYYY-MM-DD value),
+    // and a free-text description for anything the fields above do not capture.
+    neededBy: "",
+    message: "",
     // One entry per product customizationField, keyed by label. Seeded from the
     // product so a field the admin has since removed simply never renders, and
     // one added after this page loaded is caught server-side rather than lost.
@@ -68,12 +80,24 @@ export function QuoteModal({
       return;
     }
 
+    // A custom request has no size/customization fields to check — the
+    // description is what has to be there instead, because it is the whole
+    // enquiry.
+    if (custom && !form.message.trim()) {
+      setFieldErrors({ message: "Please describe your custom product." });
+      setSendError("Please describe what you would like made.");
+      setSending(false);
+      return;
+    }
+
     // The browser's own required handling covers these, but an empty-value
     // custom field and a blank size would otherwise leave a confusing message
     // for the server to reject.
-    const missing = product.customizationFields.filter(
-      (f) => f.required && !(form.customization[f.label] ?? "").trim()
-    );
+    const missing = custom
+      ? []
+      : product.customizationFields.filter(
+          (f) => f.required && !(form.customization[f.label] ?? "").trim()
+        );
 
     if (missing.length > 0) {
       setFieldErrors(
@@ -89,7 +113,7 @@ export function QuoteModal({
       return;
     }
 
-    if (product.sizes.length > 0 && !form.size) {
+    if (!custom && product.sizes.length > 0 && !form.size) {
       setFieldErrors({ size: "Please choose a size." });
       setSendError("Please choose a size.");
       setSending(false);
@@ -104,12 +128,18 @@ export function QuoteModal({
           phone: form.phone,
           product: product.name,
           productSlug: product.slug,
-          size: form.size,
+          ...(custom ? {} : { size: form.size }),
           quantity: form.quantity,
-          customization: product.customizationFields.map((f) => ({
-            label: f.label,
-            value: form.customization[f.label] ?? "",
-          })),
+          neededBy: form.neededBy,
+          message: form.message,
+          ...(custom
+            ? { isCustom: true }
+            : {
+                customization: product.customizationFields.map((f) => ({
+                  label: f.label,
+                  value: form.customization[f.label] ?? "",
+                })),
+              }),
           attachment: fileName,
           website: form.website,
         },
@@ -183,10 +213,12 @@ export function QuoteModal({
               className="text-2xl font-bold text-gray-900 mb-2"
               style={{ fontFamily: "Poppins, sans-serif" }}
             >
-              Quote Request Sent!
+              {custom ? "Custom Request Sent!" : "Quote Request Sent!"}
             </h2>
             <p className="text-gray-500 text-sm mb-1 leading-relaxed">
-              Thank you for your interest in the
+              {custom
+                ? "Thank you — we'll be in touch about your idea for the"
+                : "Thank you for your interest in the"}
             </p>
             <p
               className="font-bold mb-4"
@@ -262,7 +294,7 @@ export function QuoteModal({
                     className="text-xs font-bold uppercase tracking-widest mb-0.5"
                     style={{ color: "#D4AF37" }}
                   >
-                    Requesting Quote For
+                    {custom ? "Customizing" : "Requesting Quote For"}
                   </p>
                   <h3
                     className="text-lg font-bold text-white leading-tight"
@@ -448,11 +480,47 @@ export function QuoteModal({
                 </div>
               </div>
 
-              {/* Logo upload — only for products the admin flagged as engraved/printed */}
-              {product.allowImageUpload && (
+              {/* Needed By — the customer tells us their deadline */}
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
-                  Logo / Image Upload
+                  Needed By{" "}
+                  <span className="font-normal normal-case text-gray-400">
+                    (optional)
+                  </span>
+                </label>
+                <input
+                  type="date"
+                  value={form.neededBy}
+                  onChange={(e) =>
+                    setForm({ ...form, neededBy: e.target.value })
+                  }
+                  className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all"
+                  style={{
+                    background: "#F8FAFC",
+                    border: "1.5px solid #E2E8F0",
+                  }}
+                  onFocus={(e) =>
+                    (e.target.style.border =
+                      "1.5px solid #2563EB")
+                  }
+                  onBlur={(e) =>
+                    (e.target.style.border =
+                      "1.5px solid #E2E8F0")
+                  }
+                />
+                <p className="mt-1.5 text-xs text-gray-400">
+                  When do you need it ready? Leave blank if there's no
+                  fixed date.
+                </p>
+              </div>
+
+              {/* Logo upload — always offered on a custom request (the reference
+                  image is the point), otherwise only for products the admin
+                  flagged as engraved/printed */}
+              {(custom || product.allowImageUpload) && (
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  {custom ? "Reference Image" : "Logo / Image Upload"}
                 </label>
                 <label
                   className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all"
@@ -487,7 +555,9 @@ export function QuoteModal({
                   <div>
                     <p className="text-sm font-medium text-gray-700">
                       {fileName ||
-                        "Click to upload logo or image"}
+                        (custom
+                          ? "Click to upload a reference image"
+                          : "Click to upload logo or image")}
                     </p>
                     <p className="text-xs text-gray-400">
                       {fileTooBig
@@ -507,8 +577,9 @@ export function QuoteModal({
               </div>
               )}
 
-              {/* Size — required whenever the product offers a choice */}
-              {product.sizes.length > 0 && (
+              {/* Size — required whenever the product offers a choice. Hidden on
+                  a custom request, where the size is part of the description. */}
+              {!custom && product.sizes.length > 0 && (
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
                     Size{" "}
@@ -543,8 +614,10 @@ export function QuoteModal({
                 </div>
               )}
 
-              {/* Customization fields defined by the admin for this product */}
-              {product.customizationFields.map((field) => {
+              {/* Customization fields defined by the admin for this product.
+                  Hidden on a custom request — they describe the catalogue item,
+                  not the bespoke piece being asked for. */}
+              {!custom && product.customizationFields.map((field) => {
                 const value = form.customization[field.label] ?? "";
                 const error = fieldErrors[`customization.${field.label}`];
                 const over = value.length > field.maxLength;
@@ -611,6 +684,59 @@ export function QuoteModal({
                 );
               })}
 
+              {/* Description — a free-text box for anything the fields above do
+                  not capture. On a custom request it is the centrepiece and
+                  required, because it *is* the enquiry. */}
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  {custom
+                    ? "Describe your custom product"
+                    : "Description / Additional Notes"}{" "}
+                  {custom ? (
+                    <span style={{ color: "#DC2626" }}>*</span>
+                  ) : (
+                    <span className="font-normal normal-case text-gray-400">
+                      (optional)
+                    </span>
+                  )}
+                </label>
+                <textarea
+                  required={custom}
+                  value={form.message}
+                  maxLength={2000}
+                  onChange={(e) =>
+                    setForm({ ...form, message: e.target.value })
+                  }
+                  placeholder={
+                    custom
+                      ? "Tell us what you'd like made — size, material, colour, occasion, your own twist on this design…"
+                      : "Tell us anything else — occasion, style preference, design ideas, special requests…"
+                  }
+                  rows={custom ? 4 : 3}
+                  className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all resize-none"
+                  style={{
+                    background: "#F8FAFC",
+                    border: fieldErrors.message
+                      ? "1.5px solid #FCA5A5"
+                      : "1.5px solid #E2E8F0",
+                  }}
+                  onFocus={(e) =>
+                    (e.target.style.border =
+                      "1.5px solid #2563EB")
+                  }
+                  onBlur={(e) =>
+                    (e.target.style.border = fieldErrors.message
+                      ? "1.5px solid #FCA5A5"
+                      : "1.5px solid #E2E8F0")
+                  }
+                />
+                {fieldErrors.message && (
+                  <p className="mt-1.5 text-xs text-red-600">
+                    {fieldErrors.message}
+                  </p>
+                )}
+              </div>
+
               {/* Honeypot: hidden from humans, bots fill it in. The server
                   swallows any request carrying a value and answers 201
                   without storing anything. */}
@@ -654,7 +780,11 @@ export function QuoteModal({
                 }}
               >
                 <Send size={15} />
-                {sending ? "Sending…" : "Submit Quote Request"}
+                {sending
+                  ? "Sending…"
+                  : custom
+                    ? "Submit Custom Request"
+                    : "Submit Quote Request"}
               </button>
 
               <p className="text-center text-xs text-gray-400">

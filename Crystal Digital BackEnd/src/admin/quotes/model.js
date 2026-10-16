@@ -28,6 +28,10 @@ const QuoteSchema = new mongoose.Schema(
     size: { type: String, default: "", trim: true, maxlength: 80 },
     service: { type: String, default: "", trim: true, maxlength: 120 },
     quantity: { type: String, default: "", trim: true, maxlength: 20 },
+    // The date the customer wants the order ready by. Stored as a plain string
+    // (the input's YYYY-MM-DD value) rather than a Date, so no timezone shifting
+    // can move it a day, and an empty/cleared field stays a first-class state.
+    neededBy: { type: String, default: "", trim: true, maxlength: 40 },
     // The customer's answers to the product's customizationFields, stored as
     // [{ label, value }] rather than one free-text blob. The label is kept with
     // the value on purpose: the admin reads "Recipient name: Ramesh", and the
@@ -53,6 +57,11 @@ const QuoteSchema = new mongoose.Schema(
     attachmentUrl: { type: String, default: "", trim: true, maxlength: 500 },
     attachmentPublicId: { type: String, default: "", trim: true, maxlength: 200 },
     message: { type: String, default: "", trim: true, maxlength: 2000 },
+    // A custom-product request: the customer saw a catalogue product (or nothing
+    // suitable) and described their own twist instead. It still travels through
+    // the quote pipeline, so the admin follows up by phone exactly as with a
+    // normal quote — this flag only lets the dashboard tell the two apart.
+    isCustom: { type: Boolean, default: false },
     status: {
       type: String,
       enum: ["new", "reviewed", "quoted", "closed"],

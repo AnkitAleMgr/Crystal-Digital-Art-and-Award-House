@@ -70,7 +70,7 @@ function ProductModal({
           <Input label="Price" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="e.g. Rs. 2,500" />
         </div>
         <p className="-mt-3 text-xs text-gray-400">
-          Price is shown on the product page and product cards. Leave it empty to display "N/A".
+          Leave empty to show "N/A".
         </p>
         {initial && (
           <p className="-mt-3 text-xs text-gray-400">
@@ -108,20 +108,12 @@ function ProductModal({
           />
           <label htmlFor="allow-image-upload" className="cursor-pointer select-none">
             <span className="text-sm font-semibold text-gray-700">Allow customer image upload</span>
-            <span className="block text-xs text-gray-500 mt-0.5">
-              Shows a logo/image upload field on this product's quote form. Leave off for products with no engraving or printing.
-            </span>
           </label>
         </div>
 
         {/* Customization fields */}
         <div>
-          <label className="text-sm font-semibold text-gray-700 block mb-1">Required Information from Customer</label>
-          <p className="text-xs text-gray-500 mb-2">
-            Each one becomes a field the customer must fill in when they request a
-            quote for this product. Leave empty for a product that needs nothing
-            special.
-          </p>
+          <label className="text-sm font-semibold text-gray-700 block mb-2">Required Information from Customer</label>
           <div className="flex gap-2 mb-2">
             <input
               value={customInput}
@@ -171,19 +163,16 @@ function ProductModal({
               </div>
             ))}
             {form.customizationFields.length === 0 && (
-              <p className="text-xs text-gray-400 italic">No fields added — customers will only be asked for the standard quote details.</p>
+              <p className="text-xs text-gray-400 italic">No fields added.</p>
             )}
           </div>
         </div>
 
         {/* Sizes */}
         <div>
-          <label className="text-sm font-semibold text-gray-700 block mb-1">
+          <label className="text-sm font-semibold text-gray-700 block mb-2">
             Available Sizes <span className="font-normal text-gray-400">(optional)</span>
           </label>
-          <p className="text-xs text-gray-500 mb-2">
-            Leave empty if this product comes in one standard size only — size selection will be hidden on the product page.
-          </p>
           <div className="flex gap-2 mb-2">
             <input
               value={sizeInput}
@@ -229,7 +218,7 @@ function ProductModal({
               </span>
             ))}
             {(form.sizes || []).length === 0 && (
-              <span className="text-xs text-gray-400 italic">No sizes added — single/standard size product</span>
+              <span className="text-xs text-gray-400 italic">No sizes added.</span>
             )}
           </div>
         </div>

@@ -116,6 +116,9 @@ export const notifyOwnerOfQuote = async (quote, listPrice = "") => {
   const info = await business();
 
   const rows = [
+    // Flagged first so the owner sees at a glance that this is a bespoke ask and
+    // not a standard quote before reading the rest of the row.
+    ...(quote.isCustom ? [row("Type", "Custom product request")] : []),
     row("Name", esc(quote.name)),
     row("Email", esc(quote.email)),
     row("Phone", esc(dash(quote.phone, "Not provided"))),
@@ -124,6 +127,7 @@ export const notifyOwnerOfQuote = async (quote, listPrice = "") => {
     row("Service", esc(dash(quote.service, "—"))),
     row("Size", esc(dash(quote.size, "—"))),
     row("Quantity", esc(dash(quote.quantity, "—"))),
+    row("Needed by", esc(dash(quote.neededBy, "Not specified"))),
     // One row per customization answer rather than a single blob, because the
     // whole point of the structured fields is that the owner can read them
     // without guessing which bit answers which question.
@@ -146,7 +150,7 @@ export const notifyOwnerOfQuote = async (quote, listPrice = "") => {
       : "";
 
   const html = layout(
-    "New enquiry from the website",
+    quote.isCustom ? "New custom product request" : "New enquiry from the website",
     `${table(rows)}${artwork}${quote.message ? block(quote.message) : ""}
      <p style="margin:20px 0 0;font-size:12px;color:#9CA3AF;">
        Reply to this email to answer ${esc(quote.name)} directly.
@@ -156,7 +160,9 @@ export const notifyOwnerOfQuote = async (quote, listPrice = "") => {
 
   return sendMail({
     to,
-    subject: `New enquiry — ${quote.product || quote.service || "General"}`,
+    subject: quote.isCustom
+      ? `Custom product request — ${quote.product || "General"}`
+      : `New enquiry — ${quote.product || quote.service || "General"}`,
     html,
     replyTo: quote.email,
   });

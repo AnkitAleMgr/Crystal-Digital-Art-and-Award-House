@@ -14,8 +14,11 @@ import { PublicGalleryItem } from "../types/Public";
 import { priceLabel } from "../utils/price";
 import { applyPageMeta } from "../utils/seo";
 import { Section } from "../components/pages/home/homeSection";
+import { CategoryPills } from "../components/ui/categoryPills";
 import { X } from "lucide-react";
 import img7 from "../../../imports/image-7.webp";
+
+const PAGE_SIZE = 12;
 
 // Gallery grid with category pills and a lightbox; items can link to a
 // product's page via linkedProductId.
@@ -31,6 +34,7 @@ export function GalleryPage() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState(ALL_FILTER);
   const [lightbox, setLightbox] = useState<PublicGalleryItem | null>(null);
+  const [shown, setShown] = useState(PAGE_SIZE);
   const { gallery: galleryItems, categories, products } = useSiteData();
 
   // Same shared category list as the home page — the admin manages one list for
@@ -41,6 +45,16 @@ export function GalleryPage() {
     galleryItems.filter((i) => !i.cat).length
   );
   const filtered = galleryItems.filter((i) => inCategory(i.cat, filter));
+
+  // Paint the gallery in batches like the product catalogue: a large collection
+  // all at once is a lot of images for the browser to decode and lay out.
+  const visibleItems = filtered.slice(0, shown);
+  const remaining = filtered.length - visibleItems.length;
+
+  // A freshly chosen filter starts back at the first batch.
+  useEffect(() => {
+    setShown(PAGE_SIZE);
+  }, [filter]);
 
   return (
     <div style={{ paddingTop: "80px" }}>
@@ -81,37 +95,16 @@ export function GalleryPage() {
 
       <Section bg="white">
         {/* Filters */}
-        <div className="flex flex-wrap justify-center gap-3 mb-10">
-          {cats.map((c) => (
-            <button
-              key={c}
-              onClick={() => setFilter(c)}
-              className="px-5 py-2 rounded-full text-sm font-semibold transition-all"
-              style={{
-                background:
-                  filter === c
-                    ? "linear-gradient(135deg, #2563EB, #1D4ED8)"
-                    : "white",
-                color: filter === c ? "white" : "#374151",
-                border:
-                  filter === c
-                    ? "none"
-                    : "1px solid rgba(0,0,0,0.1)",
-                boxShadow:
-                  filter === c
-                    ? "0 4px 14px rgba(37,99,235,0.3)"
-                    : "0 1px 4px rgba(0,0,0,0.04)",
-                fontFamily: "Poppins, sans-serif",
-              }}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
+        <CategoryPills
+          filters={cats}
+          active={filter}
+          onSelect={setFilter}
+          className="mb-10"
+        />
 
         {/* Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {filtered.map((item, i) => (
+          {visibleItems.map((item, i) => (
             <div
               key={`${item.label}-${i}`}
               className="group relative rounded-2xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
@@ -146,6 +139,21 @@ export function GalleryPage() {
             </div>
           ))}
         </div>
+
+        {remaining > 0 && (
+          <div className="flex justify-center mt-12">
+            <button
+              onClick={() => setShown((n) => n + PAGE_SIZE)}
+              className="px-7 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-105 hover:shadow-lg active:scale-95"
+              style={{
+                background: "linear-gradient(135deg, #2563EB, #1D4ED8)",
+                fontFamily: "Poppins, sans-serif",
+              }}
+            >
+              Load More ({remaining} remaining)
+            </button>
+          </div>
+        )}
       </Section>
 
       {/* Lightbox */}

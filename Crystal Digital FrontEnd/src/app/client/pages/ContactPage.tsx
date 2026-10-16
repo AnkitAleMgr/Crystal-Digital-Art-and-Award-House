@@ -14,6 +14,8 @@ const EMPTY_FORM = {
   phone: "",
   email: "",
   service: "",
+  // The date the customer needs the order ready by (the date input's value).
+  neededBy: "",
   message: "",
   website: "",
 };
@@ -60,6 +62,7 @@ export function ContactPage() {
         email: form.email,
         phone: form.phone,
         service: form.service,
+        neededBy: form.neededBy,
         message: form.message,
         website: form.website,
       });
@@ -219,7 +222,7 @@ export function ContactPage() {
                   icon: Instagram,
                   label: "Instagram",
                   color: "#E1306C",
-                  href: null,
+                  href: settings.instagramUrl,
                 },
                 {
                   icon: MapPin,
@@ -393,6 +396,30 @@ export function ContactPage() {
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                  Needed By (Optional)
+                </label>
+                <input
+                  type="date"
+                  value={form.neededBy}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      neededBy: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all focus:ring-2 focus:ring-blue-400"
+                  style={{
+                    background: "#F8FAFC",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                  }}
+                />
+                <p className="mt-1.5 text-xs text-gray-400">
+                  When do you need it ready? Leave blank if there's no
+                  fixed date.
+                </p>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">

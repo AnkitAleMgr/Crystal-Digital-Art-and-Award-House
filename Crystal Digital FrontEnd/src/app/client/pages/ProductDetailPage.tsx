@@ -7,7 +7,7 @@ import { useInView } from "../../client/hooks/useInView";
 import { QuoteModal } from "../../client/components/pages/Product/productQuoteModal";
 import { useState } from "react";
 import { useEffect } from "react";
-import { ArrowLeft, CheckCircle, ChevronRight, Clock, MapPin, Phone, Send, Settings } from "lucide-react";
+import { ArrowLeft, CheckCircle, ChevronRight, Clock, MapPin, Phone, Send, Settings, Wand2 } from "lucide-react";
 import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { applyPageMeta } from "../utils/seo";
 
@@ -35,6 +35,7 @@ export function ProductDetailPage() {
   }, [product?.id, product?.name, product?.desc]);
 
   const [quoteOpen, setQuoteOpen] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
   const [selectedSize, setSelectedSize] = useState("");
   const { ref: customRef, visible: customVisible } =
     useInView(0.1);
@@ -82,6 +83,14 @@ export function ProductDetailPage() {
           product={product}
           initialSize={selectedSize}
           onClose={() => setQuoteOpen(false)}
+        />
+      )}
+
+      {customOpen && (
+        <QuoteModal
+          product={product}
+          custom
+          onClose={() => setCustomOpen(false)}
         />
       )}
 
@@ -343,7 +352,7 @@ export function ProductDetailPage() {
               </div>
 
               {/* CTA buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+              <div className="flex flex-col sm:flex-row gap-3 mb-3">
                 <button
                   onClick={() => setQuoteOpen(true)}
                   className="flex-1 py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -371,6 +380,22 @@ export function ProductDetailPage() {
                   View Gallery
                 </button>
               </div>
+
+              {/* Customize — the bespoke path: describe a twist on this design
+                  and upload a reference image; staff follow up by phone. */}
+              <button
+                onClick={() => setCustomOpen(true)}
+                className="w-full mb-6 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                style={{
+                  background: "rgba(212,175,55,0.12)",
+                  color: "#8C6D0E",
+                  border: "2px solid #D4AF37",
+                  fontFamily: "Poppins, sans-serif",
+                }}
+              >
+                <Wand2 size={15} />
+                Customize This Design
+              </button>
 
               {/* Contact strip */}
               <div

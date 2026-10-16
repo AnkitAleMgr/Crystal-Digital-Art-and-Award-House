@@ -16,9 +16,10 @@ import { uploadImage } from "../claudinery/claudineryService.js";
 import { ALLOWED_IMAGE_MIME_TYPES } from "../middleware/imageUpload.js";
 
 // The public read shape of a product. `id` is the SLUG, not the Mongo id: the
-// site's /products/:slug URLs and gallery.linkedProductId are both slug-based,
-// and imgPublicId is deliberately absent — it is the key that destroys the
-// Cloudinary asset and has no business being public.
+// site's /products/:slug URLs are slug-based, and the gallery lightbox resolves
+// its linkedProductId to a slug to match (see getPublicGallery). imgPublicId is
+// deliberately absent — it is the key that destroys the Cloudinary asset and has
+// no business being public.
 const publicProduct = (doc) => ({
   id: doc.slug,
   slug: doc.slug,
@@ -91,9 +92,32 @@ export const getPublicProducts = async (req, res) => {
 export const getPublicGallery = async (req, res) => {
   try {
     const docs = await GalleryModel.find().sort({ createdAt: 1 });
-    res.json({ status: true, data: docs.map(publicGallery) });
+
+    // The admin links a gallery item to a product by the product's Mongo `_id`
+    // (the only id the dashboard knows), but the public product id is its slug —
+    // so the raw stored value never matches `products.find(p => p.id === …)` on
+    // the site. Resolve either form (a Mongo id, or a legacy slug written by the
+    // seeder) to the slug the site navigates with, so the lightbox's "Open
+    // Product Page" points at a real product. An unresolvable link — deleted or
+    // slugless product — becomes "", i.e. no button, rather than a dead route.
+    const products = await ProductModel.find({ slug: { $exists: true, $ne: "" } })
+      .select("_id slug")
+      .lean();
+    const slugFor = new Map();
+    for (const p of products) {
+      slugFor.set(String(p._id), p.slug);
+      slugFor.set(p.slug, p.slug);
+    }
+
+    res.json({
+      status: true,
+      data: docs.map((doc) => ({
+        ...publicGallery(doc),
+        linkedProductId: slugFor.get(doc.linkedProductId || "") ?? "",
+      })),
+    });
   } catch (error) {
-    res.status(500).json({ status: false, message: error.message });
+    fail(res, error);
   }
 };
 
@@ -255,9 +279,16 @@ export const createPublicQuote = async (req, res) => {
 
   const productSlug = field(req.body.productSlug, 160);
 
+  // A custom-product request asks for something that does not match the catalogue
+  // product it started from, so the product's size list and required
+  // customization fields must NOT be enforced — the customer describes the piece
+  // in `message` instead. Multipart posts it as the string "true".
+  const isCustom = field(req.body.isCustom, 10) === "true";
+
   // Whether an attached file may be stored. True for a general enquiry (the
-  // contact form never sends one, so there is nothing to gate); for a
-  // product-scoped quote it mirrors the product's admin-set flag.
+  // contact form never sends one, so there is nothing to gate) and for a custom
+  // request (the reference image is the point); for a product-scoped quote it
+  // mirrors the product's admin-set flag.
   let artworkAllowed = true;
 
   // A product-scoped quote has to resolve to a real product before its size and
@@ -273,7 +304,7 @@ export const createPublicQuote = async (req, res) => {
     }
   }
 
-  if (product) {
+  if (product && !isCustom) {
     const size = field(req.body.size, 80);
 
     // Only enforced when the product actually offers sizes — a one-size product
@@ -319,6 +350,8 @@ export const createPublicQuote = async (req, res) => {
       size: field(req.body.size, 80),
       service: field(req.body.service, 120),
       quantity: field(req.body.quantity, 20),
+      neededBy: field(req.body.neededBy, 40),
+      isCustom,
       customization: req.quoteCustomization ?? [],
       // Taken from the uploaded part rather than a separate field, so the name
       // the admin reads always describes the image that was actually stored.

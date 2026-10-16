@@ -5,6 +5,7 @@ import { ImageWithFallback } from "../../components/figma/ImageWithFallback";
 import { useSiteData } from "../components/layout/siteDataProvider";
 import { ProductCard } from "../components/pages/Product/productCard";
 import { Section } from "../components/pages/home/homeSection";
+import { CategoryPills } from "../components/ui/categoryPills";
 import {
   ALL_FILTER,
   categoryFilters,
@@ -120,31 +121,12 @@ export function ProductsPage() {
 
       <Section bg="white">
         {/* Category pills — the shared admin-managed list */}
-        <div className="flex flex-wrap justify-center gap-3 mb-8">
-          {filters.map((c) => {
-            const active = activeCat === c;
-            return (
-              <button
-                key={c}
-                onClick={() => setParam("cat", c, c === ALL_FILTER)}
-                className="px-5 py-2 rounded-full text-sm font-semibold transition-all"
-                style={{
-                  background: active
-                    ? "linear-gradient(135deg, #2563EB, #1D4ED8)"
-                    : "white",
-                  color: active ? "white" : "#374151",
-                  border: active ? "none" : "1px solid rgba(0,0,0,0.1)",
-                  boxShadow: active
-                    ? "0 4px 14px rgba(37,99,235,0.3)"
-                    : "0 1px 4px rgba(0,0,0,0.04)",
-                  fontFamily: "Poppins, sans-serif",
-                }}
-              >
-                {c}
-              </button>
-            );
-          })}
-        </div>
+        <CategoryPills
+          filters={filters}
+          active={activeCat}
+          onSelect={(c) => setParam("cat", c, c === ALL_FILTER)}
+          className="mb-8"
+        />
 
         {/* Search + sort + result count */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">

@@ -53,9 +53,13 @@ export interface QuoteSubmission {
   size?: string;
   service?: string;
   quantity?: string;
+  /** The date the order should be ready by, as the date input's YYYY-MM-DD value. */
+  neededBy?: string;
   customization?: { label: string; value: string }[];
   attachment?: string;
   message?: string;
+  /** True for a custom-product request (the "Customize" button), not a plain quote. */
+  isCustom?: boolean;
   website?: string;
 }
 

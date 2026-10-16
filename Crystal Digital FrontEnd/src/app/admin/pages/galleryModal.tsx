@@ -23,7 +23,7 @@ function GalleryModal({
   const [form, setForm] = useState<Omit<GalleryItem, "id">>(
     initial
       ? { label: initial.label, cat: initial.cat, imgUrl: initial.imgUrl, imgPublicId: initial.imgPublicId, linkedProductId: initial.linkedProductId }
-      : { label: "", cat: "", imgUrl: "", imgPublicId: "", linkedProductId: undefined }
+      : { label: "", cat: "", imgUrl: "", imgPublicId: "", linkedProductId: "" }
   );
 
   return (
@@ -42,12 +42,12 @@ function GalleryModal({
             Link to Product <span className="text-gray-400 font-normal">(optional)</span>
           </label>
           <p className="text-xs text-gray-500 -mt-0.5">
-            When linked, a visitor who opens this image in the gallery can click "Open Product Page" to go directly to that product. Leave as <em>None</em> for store, staff, or event photos that are not tied to a specific product.
+            Lets visitors open the linked product from the gallery.
           </p>
           <select
             value={form.linkedProductId || ""}
             onChange={(e) =>
-              setForm({ ...form, linkedProductId: e.target.value || undefined })
+              setForm({ ...form, linkedProductId: e.target.value })
             }
             className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
           >
