@@ -96,8 +96,8 @@ export const getPublicGallery = async (req, res) => {
     // The admin links a gallery item to a product by the product's Mongo `_id`
     // (the only id the dashboard knows), but the public product id is its slug —
     // so the raw stored value never matches `products.find(p => p.id === …)` on
-    // the site. Resolve either form (a Mongo id, or a legacy slug written by the
-    // seeder) to the slug the site navigates with, so the lightbox's "Open
+    // the site. Resolve either form (a Mongo id, or a legacy slug stored in the
+    // field) to the slug the site navigates with, so the lightbox's "Open
     // Product Page" points at a real product. An unresolvable link — deleted or
     // slugless product — becomes "", i.e. no button, rather than a dead route.
     const products = await ProductModel.find({ slug: { $exists: true, $ne: "" } })
@@ -132,7 +132,7 @@ export const getPublicTestimonials = async (req, res) => {
 };
 
 // GET /api/settings — the business details the site's footer/contact/about copy
-// is built from. `null` only on a database the seeder has never touched.
+// is built from. `null` only on a database with no settings row yet.
 export const getPublicSettings = async (req, res) => {
   try {
     const doc = await SettingModel.findOne();

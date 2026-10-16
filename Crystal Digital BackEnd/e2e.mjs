@@ -663,8 +663,8 @@ const findSub = async () =>
 
 // 23.9 Every product now gets a server-generated slug, so a new product always
 //       has a public page to link the broadcast to. The broadcast's own
-//       slug guard remains for the one legacy row that predates this (the
-//       seeded "test product 1"), which is why it is not dead code.
+//       slug guard remains for any legacy slugless row that predates this, which
+//       is why it is not dead code.
 {
   const { code, body } = await call("/admin/products", {
     method: "POST",

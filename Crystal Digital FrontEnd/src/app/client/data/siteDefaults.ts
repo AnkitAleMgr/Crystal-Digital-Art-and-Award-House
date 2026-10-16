@@ -5,9 +5,11 @@ import { PublicSettings } from "../types/Public";
 // never render an empty phone number or address just because the settings doc is
 // missing a value.
 //
-// These deliberately mirror Crystal Digital BackEnd/src/seed/settings.mjs, which
-// is what fills the database. They are duplicated on purpose: the backend cannot
-// import frontend code and the frontend must render without a network round-trip.
+// These are the only hardcoded copy of the business details — the live settings
+// document in MongoDB is the source of truth (the backend seed files that used to
+// mirror these were removed with the seed system). They are a fallback: the
+// backend cannot import frontend code and the frontend must render without a
+// network round-trip.
 
 export const SITE_DEFAULTS: PublicSettings = {
   businessName: "Crystal Digital Art & Award House",

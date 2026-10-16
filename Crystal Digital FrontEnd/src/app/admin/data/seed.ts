@@ -1,6 +1,6 @@
 // Only the settings placeholder survives here. The products/gallery/testimonials/quotes
 // arrays were removed once the dashboard moved off localStorage onto the API, and the
-// public website content now lives in the backend at src/seed/data.mjs.
+// public website content now lives in MongoDB (served by the backend's public API).
 //
 // SEED_SETTINGS is the placeholder shown before GET /admin/settings resolves.
 
