@@ -90,8 +90,12 @@ const SLUG = "e2e-test-widget";
 
 const pass = [];
 const fail = [];
+const skip = [];
 const check = (label, cond, extra = "") =>
   (cond ? pass : fail).push(`${cond ? "PASS" : "FAIL"}  ${label}${extra ? ` — ${extra}` : ""}`);
+// For assertions that only apply on a database carrying a particular fixture —
+// reported, but not counted as a failure, so an unrelated DB does not show red.
+const skipCheck = (label) => skip.push(`SKIP  ${label}`);
 
 // The multipart body builder, defined up here because check 8b posts a
 // multipart quote too — that is the shape the real quote modal actually sends.
@@ -218,13 +222,22 @@ let plainId = null;
 }
 
 // 6. The legacy slugless row (created before slugs were server-owned) must stay
-//    hidden from the public site but survive for the admin.
+//    hidden from the public site but survive for the admin. That row is a
+//    leftover demo fixture, so a database that never had it — or has since been
+//    cleaned — legitimately has none, and the assertions below are skipped
+//    rather than failed.
 {
   const { body: adminList } = await call("/admin/products", { token });
   const strays = adminList.data.filter((p) => !p.slug);
   const { body: pubList } = await call("/api/products");
-  check("admin still sees the pre-slug test product", strays.length === 1, `found ${strays.length}: ${strays.map((s) => s.name).join(", ")}`);
-  check("public API hides it", !pubList.data.some((p) => p.id === strays[0]?.id));
+
+  if (strays.length === 0) {
+    skipCheck("admin still sees the pre-slug test product (no slugless row in this database)");
+    skipCheck("public API hides it (nothing to hide)");
+  } else {
+    check("admin still sees the pre-slug test product", strays.length === 1, `found ${strays.length}: ${strays.map((s) => s.name).join(", ")}`);
+    check("public API hides it", !pubList.data.some((p) => p.id === strays[0].id));
+  }
 }
 
 // ── public quote submission ───────────────────────────────────────────────────
@@ -1031,6 +1044,7 @@ let resetPh = null;
 console.log("");
 pass.forEach((l) => console.log(l));
 fail.forEach((l) => console.log(l));
-console.log(`\n${pass.length} passed, ${fail.length} failed`);
+skip.forEach((l) => console.log(l));
+console.log(`\n${pass.length} passed, ${fail.length} failed${skip.length ? `, ${skip.length} skipped` : ""}`);
 await mongoose.disconnect();
 process.exit(fail.length ? 1 : 0);

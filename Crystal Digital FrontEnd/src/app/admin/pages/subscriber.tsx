@@ -131,47 +131,82 @@ export function AdminSubscribers() {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>
-                  {["Email", "Status", "Signed up", "Confirmed", ""].map((heading, i) => (
-                    <th key={i} className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                      {heading}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((s) => {
-                  const style = STATUS_STYLE[s.status];
-                  return (
-                    <tr key={s.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
-                      <td className="px-5 py-3.5 text-sm font-medium text-gray-800 break-all">{s.email}</td>
-                      <td className="px-5 py-3.5">
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap" style={{ color: style.color, background: style.bg }}>
-                          {style.label}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-xs text-gray-500 whitespace-nowrap">{formatWhen(s.createdAt)}</td>
-                      <td className="px-5 py-3.5 text-xs text-gray-500 whitespace-nowrap">{s.confirmedAt ? formatWhen(s.confirmedAt) : "—"}</td>
-                      <td className="px-5 py-3.5 text-right">
-                        <button
-                          onClick={() => setDeleting(s)}
-                          aria-label={`Delete ${s.email}`}
-                          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <>
+          <div className="sm:hidden space-y-3">
+            {visible.map((s) => {
+              const style = STATUS_STYLE[s.status];
+              return (
+                <div key={s.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-medium text-gray-800 break-all flex-1 min-w-0">{s.email}</p>
+                    <button
+                      onClick={() => setDeleting(s)}
+                      aria-label={`Delete ${s.email}`}
+                      className="p-1.5 -mt-1 -mr-1 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors flex-shrink-0"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                  <span className="inline-block mt-2 text-xs font-semibold px-2.5 py-1 rounded-full" style={{ color: style.color, background: style.bg }}>
+                    {style.label}
+                  </span>
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-gray-500">
+                    <div>
+                      <div className="text-gray-400 mb-0.5">Signed up</div>
+                      {formatWhen(s.createdAt)}
+                    </div>
+                    <div>
+                      <div className="text-gray-400 mb-0.5">Confirmed</div>
+                      {s.confirmedAt ? formatWhen(s.confirmedAt) : "—"}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
+
+          <div className="hidden sm:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    {["Email", "Status", "Signed up", "Confirmed", ""].map((heading, i) => (
+                      <th key={i} className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        {heading}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.map((s) => {
+                    const style = STATUS_STYLE[s.status];
+                    return (
+                      <tr key={s.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
+                        <td className="px-5 py-3.5 text-sm font-medium text-gray-800 break-all">{s.email}</td>
+                        <td className="px-5 py-3.5">
+                          <span className="text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap" style={{ color: style.color, background: style.bg }}>
+                            {style.label}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-xs text-gray-500 whitespace-nowrap">{formatWhen(s.createdAt)}</td>
+                        <td className="px-5 py-3.5 text-xs text-gray-500 whitespace-nowrap">{s.confirmedAt ? formatWhen(s.confirmedAt) : "—"}</td>
+                        <td className="px-5 py-3.5 text-right">
+                          <button
+                            onClick={() => setDeleting(s)}
+                            aria-label={`Delete ${s.email}`}
+                            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
 
       {deleting && (

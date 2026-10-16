@@ -29,6 +29,40 @@ export const ALLOWED_FOLDERS = ["products", "gallery", "testimonials", "quote-ar
 
 const MAX_WIDTH = 1600;
 
+// Upload retry policy. A Cloudinary upload occasionally stalls and aborts at the
+// SDK's timeout ("Request Timeout", http_code 499); the SDK never retries, so a
+// single stall would throw away the customer's artwork — and attachArtwork is
+// deliberately fire-and-forget, so nothing else recovers it.
+//
+// Three attempts, each capped well below the SDK's 60s default, with a short
+// backoff. The cap matters: without it a stalled first attempt would hold the
+// request for a full minute before the retry even started. A datacenter upload
+// of a ≤5MB image normally completes in ~1.5s, so 20s is generous.
+const UPLOAD_ATTEMPTS = 3;
+const UPLOAD_TIMEOUT_MS = 20_000;
+const RETRY_DELAYS_MS = [300, 600];
+
+// Timeouts and dropped connections are worth retrying. Anything else — a bad
+// public_id, a 401, an invalid file — would fail identically on the next attempt
+// and must be surfaced immediately rather than delayed.
+//
+// The SDK rejects with the error NESTED: `{ error: { message, http_code, name } }`
+// (verified against cloudinary@2.11.0 — the top level has no `message`/`http_code`
+// of its own), so unwrap it before inspecting.
+const isTransient = (error) => {
+  const inner = error?.error ?? error;
+
+  return (
+    inner?.name === "TimeoutError" ||
+    inner?.http_code === 499 ||
+    /timeout|timed out|econnreset|econnrefused|etimedout|socket hang up|epipe|econnaborted|network|eai_again/i.test(
+      String(inner?.message ?? "")
+    )
+  );
+};
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // Only [a-z0-9_-] survives. A caller-supplied public_id becomes part of a URL that
 // anyone can request, so anything that could carry a path separator, a query
 // string or a percent-escape is stripped rather than escaped.
@@ -69,36 +103,55 @@ export const uploadImage = async (
   // verified working — do not "fix" it back to a stream or a raw buffer.
   const dataUri = `data:${type};base64,${buffer.toString("base64")}`;
 
-  let result;
+  const options = {
+    folder: `${ROOT_FOLDER}/${safeFolder}`,
+    public_id: name,
+    resource_type: "image",
+    overwrite: false,
+    timeout: UPLOAD_TIMEOUT_MS,
+    // maxWidth: 0 means "keep the original pixels". Customer artwork uses
+    // that: a print-ready logo is routinely wider than MAX_WIDTH and silently
+    // downscaling it would destroy the exact detail the admin needs to judge.
+    ...(maxWidth ? { transformation: [{ width: maxWidth, crop: "limit" }] } : {}),
+  };
 
-  try {
-    result = await cloudinary.uploader.upload(dataUri, {
-      folder: `${ROOT_FOLDER}/${safeFolder}`,
-      public_id: name,
-      resource_type: "image",
-      overwrite: false,
-      // maxWidth: 0 means "keep the original pixels". Customer artwork uses
-      // that: a print-ready logo is routinely wider than MAX_WIDTH and silently
-      // downscaling it would destroy the exact detail the admin needs to judge.
-      ...(maxWidth ? { transformation: [{ width: maxWidth, crop: "limit" }] } : {}),
-    });
-  } catch (error) {
-    const wrapped = new Error(
-      error.error?.message || error.message || "Cloudinary rejected the upload"
-    );
-    wrapped.status = error.http_code === 401 || error.http_code === 403 ? 502 : 400;
-    wrapped.cloudinaryError = true;
-    throw wrapped;
+  let lastError;
+
+  for (let attempt = 1; attempt <= UPLOAD_ATTEMPTS; attempt += 1) {
+    try {
+      const result = await cloudinary.uploader.upload(dataUri, options);
+
+      return {
+        url: result.secure_url,
+        publicId: result.public_id,
+        width: result.width,
+        height: result.height,
+        bytes: result.bytes,
+        format: result.format,
+      };
+    } catch (error) {
+      lastError = error;
+
+      if (attempt >= UPLOAD_ATTEMPTS || !isTransient(error)) {
+        break;
+      }
+
+      const delay = RETRY_DELAYS_MS[attempt - 1] ?? 0;
+      const inner = error?.error ?? error;
+
+      console.warn(
+        `[claudinery] upload attempt ${attempt}/${UPLOAD_ATTEMPTS} failed (${inner?.message ?? "unknown"}) — retrying in ${delay}ms`
+      );
+
+      await sleep(delay);
+    }
   }
 
-  return {
-    url: result.secure_url,
-    publicId: result.public_id,
-    width: result.width,
-    height: result.height,
-    bytes: result.bytes,
-    format: result.format,
-  };
+  const inner = lastError?.error ?? lastError;
+  const wrapped = new Error(inner?.message || "Cloudinary rejected the upload");
+  wrapped.status = inner?.http_code === 401 || inner?.http_code === 403 ? 502 : 400;
+  wrapped.cloudinaryError = true;
+  throw wrapped;
 };
 
 // Destroys one asset. Never throws: a failed cleanup is logged and returned as
